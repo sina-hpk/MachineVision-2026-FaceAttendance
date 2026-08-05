@@ -165,7 +165,7 @@ python main.py export       # export attendance CSV
 ## 📊 Results & Achievements
 
 - **125 automated tests** (unit + integration) — all passing
-- **19 documented bugs** with root-cause analysis (see [docs/PROJECT_JOURNAL.md](docs/PROJECT_JOURNAL.md))
+- **19 documented bugs** with root-cause analysis (see [docs/CHANGELOG.md](docs/CHANGELOG.md))
 - **Dual recognition engines**: InsightFace SCRFD + ArcFace (512-d) as primary, dlib (128-d) as automatic fallback
 - **Face quality gate**: blur (Laplacian variance), brightness, pose, and occlusion checks before encoding — low-quality crops are deliberately rejected
 - **Anti-spoofing (liveness)**: blink detection (EAR), texture analysis (FFT/LBP), and natural motion tracking

@@ -3,10 +3,8 @@
 | File | Purpose |
 | :--- | :--- |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | System architecture — components, layers, data flow |
-| [`PROJECT_JOURNAL.md`](PROJECT_JOURNAL.md) | Engineering journal — 19 documented bugs with root-cause analysis |
 | [`CHANGELOG.md`](CHANGELOG.md) | Version history and code-audit log |
 | [`SETUP_GUIDE.md`](SETUP_GUIDE.md) | Step-by-step environment setup |
-| [`TEAM_SPEEK.md`](TEAM_SPEEK.md) | Team presentation guide (in Persian) |
 | [`proposal.md`](proposal.md) | Initial project proposal (in Persian) |
 | [`proposal.pdf`](proposal.pdf) | PDF version of the proposal |
 | [`آئین‌نامه و پروتکل ارائه نهایی پروژه‌ها.pdf`](آئین_نامه%20و%20پروتکل%20ارائه%20نهایی%20پروژه_ها.pdf) | Course final-presentation rules & protocol (PDF + [Markdown](آئین‌نامه%20و%20پروتکل%20ارائه%20نهایی%20پروژه‌ها.md)) |

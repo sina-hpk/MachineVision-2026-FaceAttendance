@@ -133,7 +133,14 @@ MachineVision-2026-FaceAttendance/
 
 ### Run the server (recommended — production-ready FastAPI)
 
+> ⚠️ Use the **project virtual environment** — do NOT run with your system Python (e.g. Python 3.14 has no compatible `pydantic_core`/`dlib` wheels).
+
 ```bash
+# Windows (from the project root)
+.venv\Scripts\python.exe -m uvicorn main_fastapi:app --host 0.0.0.0 --port 8000 --reload
+
+# Linux/macOS (after activating the venv)
+source .venv/bin/activate
 python -m uvicorn main_fastapi:app --host 0.0.0.0 --port 8000 --reload
 ```
 

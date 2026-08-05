@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Academic Benchmark — CV Attendance</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0f1a;color:#e0e0e0;padding:20px}
+.container{max-width:1200px;margin:0 auto}
+h1{color:#00d4ff;font-size:2rem;margin-bottom:5px}
+.subtitle{color:#888;margin-bottom:30px}
+.card{background:#1a1a2e;border-radius:12px;padding:24px;margin-bottom:24px;border:1px solid rgba(255,255,255,0.05)}
+.card h2{color:#00d4ff;font-size:1.2rem;margin-bottom:16px}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.chart-box{background:#1a1a2e;border-radius:12px;padding:20px;border:1px solid rgba(255,255,255,0.05)}
+.chart-box h3{color:#ccc;font-size:0.9rem;margin-bottom:12px;text-align:center}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:10px 12px;font-size:0.8rem;color:#888;border-bottom:1px solid #333}
+td{padding:10px 12px;border-bottom:1px solid #222;font-size:0.9rem}
+tr:hover{background:rgba(0,212,255,0.05)}
+.highlight{color:#00d4ff;font-weight:600}
+.best{background:rgba(0,255,100,0.08)}
+.worst{background:rgba(255,50,50,0.08)}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:600}
+.badge-green{background:#00b894;color:#fff}
+.badge-yellow{background:#fdcb6e;color:#333}
+.badge-red{background:#e17055;color:#fff}
+.conclusion-box{background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid #00d4ff33;border-radius:12px;padding:20px}
+.conclusion-box ul{list-style:none}
+.conclusion-box li{margin:8px 0;padding-left:20px;position:relative}
+.conclusion-box li::before{content:'▸';position:absolute;left:0;color:#00d4ff}
+.fps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+.fps-card{background:#222244;border-radius:8px;padding:16px;text-align:center}
+.fps-card .value{font-size:2rem;font-weight:700;color:#00d4ff}
+.fps-card .label{font-size:0.8rem;color:#888;margin-top:4px}
+@media(max-width:768px){.chart-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🔬 Academic Benchmark Report</h1>
+  <p class="subtitle">Face Recognition Engine Comparison — CV Attendance System v2.2</p>
+
+  <!-- FPS Cards -->
+  <div class="card">
+    <h2>⚡ Real-Time Performance (Measured)</h2>
+    <div class="fps-grid">
+      <div class="fps-card">
+        <div class="value" id="fps-insightface">--</div>
+        <div class="label">InsightFace (ArcFace)<br>buffalo_l</div>
+      </div>
+      <div class="fps-card">
+        <div class="value" id="fps-dlib">--</div>
+        <div class="label">dlib (ResNet)<br>face_recognition</div>
+      </div>
+      <div class="fps-card">
+        <div class="value" id="fps-dlib-hog">--</div>
+        <div class="label">dlib (HOG)<br>lightweight</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="chart-grid">
+    <div class="chart-box">
+      <h3>📊 Accuracy Comparison (%)</h3>
+      <canvas id="accuracyChart"></canvas>
+    </div>
+    <div class="chart-box">
+      <h3>⚡ Latency Comparison (ms)</h3>
+      <canvas id="latencyChart"></canvas>
+    </div>
+    <div class="chart-box">
+      <h3>🎯 F1 Score & Precision</h3>
+      <canvas id="precisionChart"></canvas>
+    </div>
+    <div class="chart-box">
+      <h3>📈 Error Analysis</h3>
+      <canvas id="errorChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Results Table -->
+  <div class="card">
+    <h2>📋 Detailed Results</h2>
+    <div style="overflow-x:auto">
+      <table id="resultsTable">
+        <thead>
+          <tr>
+            <th>Engine</th>
+            <th>Model</th>
+            <th>Accuracy</th>
+            <th>Precision</th>
+            <th>Recall</th>
+            <th>F1 Score</th>
+            <th>Latency (ms)</th>
+            <th>FPS</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Conclusion -->
+  <div class="conclusion-box">
+    <h2 style="color:#00d4ff;margin-bottom:12px">🎯 Conclusion</h2>
+    <ul id="conclusionList">
+      <li>Loading benchmark data...</li>
+    </ul>
+  </div>
+  <p style="text-align:center;color:#555;margin-top:40px;font-size:0.8rem">
+    CV Attendance System — Academic Report — Generated in Real-Time
+  </p>
+</div>
+
+<script>
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+async function loadBenchmark() {
+  try {
+    const r = await fetch('/api/academic/benchmark');
+    const data = await r.json();
+    
+    // FPS cards
+    data.published.forEach(b => {
+      const fps = (1000 / b.avg_latency_ms).toFixed(1);
+      if (b.engine.includes('InsightFace') && b.model.includes('buffalo')) {
+        document.getElementById('fps-insightface').textContent = fps + ' FPS';
+      } else if (b.engine === 'dlib' && b.model.includes('ResNet')) {
+        document.getElementById('fps-dlib').textContent = fps + ' FPS';
+      } else if (b.engine === 'dlib' && b.model.includes('HOG')) {
+        document.getElementById('fps-dlib-hog').textContent = fps + ' FPS';
+      }
+    });
+
+    // Table
+    const tbody = document.querySelector('#resultsTable tbody');
+    tbody.innerHTML = data.published.map(b => {
+      const fps = (1000 / b.avg_latency_ms).toFixed(1);
+      const isBest = b.accuracy === Math.max(...data.published.map(x => x.accuracy));
+      const engine = esc(b.engine.split(' ')[0]);
+      const model = esc(b.model);
+      return `<tr class="${isBest ? 'best' : ''}">
+        <td><span class="badge ${isBest ? 'badge-green' : 'badge-yellow'}">${engine}</span></td>
+        <td>${model}</td>
+        <td>${(b.accuracy*100).toFixed(2)}%</td>
+        <td>${(b.precision*100).toFixed(2)}%</td>
+        <td>${(b.recall*100).toFixed(2)}%</td>
+        <td>${(b.f1_score*100).toFixed(2)}%</td>
+        <td>${b.avg_latency_ms}</td>
+        <td><strong>${fps}</strong></td>
+      </tr>`;
+    }).join('');
+
+    // Charts
+    const labels = data.chart_data.labels;
+    
+    new Chart(document.getElementById('accuracyChart'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Accuracy (%)',
+          data: data.chart_data.accuracy,
+          backgroundColor: ['#00d4ff88', '#fdcb6e88', '#e1705588'],
+          borderColor: ['#00d4ff', '#fdcb6e', '#e17055'],
+          borderWidth: 1,
+        }]
+      },
+      options: { scales: { y: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } }
+    });
+
+    new Chart(document.getElementById('latencyChart'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Latency (ms)',
+          data: data.chart_data.latency,
+          backgroundColor: ['#00d4ff88', '#fdcb6e88', '#e1705588'],
+          borderColor: ['#00d4ff', '#fdcb6e', '#e17055'],
+          borderWidth: 1,
+        }]
+      },
+      options: { scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+    });
+
+    new Chart(document.getElementById('precisionChart'), {
+      type: 'radar',
+      data: {
+        labels: ['Accuracy', 'Precision', 'Recall', 'F1 Score'],
+        datasets: data.published.map((b, i) => ({
+          label: b.engine.split(' ')[0] + ' (' + b.model.split(' ')[0] + ')',
+          data: [b.accuracy*100, b.precision*100, b.recall*100, b.f1_score*100],
+          backgroundColor: ['#00d4ff33', '#fdcb6e33', '#e1705533'][i],
+          borderColor: ['#00d4ff', '#fdcb6e', '#e17055'][i],
+          borderWidth: 2,
+          pointRadius: 4,
+        }))
+      },
+      options: { scales: { r: { min: 90, max: 100 } } }
+    });
+
+    new Chart(document.getElementById('errorChart'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'False Positives', data: data.published.map(b => b.false_positives), backgroundColor: '#e17055' },
+          { label: 'False Negatives', data: data.published.map(b => b.false_negatives), backgroundColor: '#fdcb6e' },
+        ]
+      },
+      options: { scales: { y: { beginAtZero: true } }, plugins: { legend: { labels: { color: '#ccc' } } } }
+    });
+
+    // Conclusion
+    const conc = data.conclusion;
+    document.getElementById('conclusionList').innerHTML = `
+      <li><strong>Best Engine:</strong> ${conc.best_engine}</li>
+      <li><strong>Accuracy:</strong> ${conc.accuracy_note}</li>
+      <li><strong>Latency:</strong> ${conc.latency_note}</li>
+      <li><strong>Recommendation:</strong> ${conc.recommendation}</li>
+    `;
+  } catch(e) {
+    document.getElementById('conclusionList').innerHTML = '<li>Error loading benchmark data. Ensure server is running.</li>';
+  }
+}
+loadBenchmark();
+</script>
+</body>
+</html>

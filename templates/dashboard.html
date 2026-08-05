@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CV Attendance System</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,sans-serif;background:#0f0f15;color:#e0e0e0;min-height:100vh}
+    header{background:#1a1a25;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #2a2a3a}
+    h1{font-size:20px;font-weight:600;letter-spacing:-0.3px}
+    h1 span{color:#6c5ce7}
+    .stats{display:flex;gap:16px;align-items:center}
+    .stat{font-size:13px;color:#999;display:flex;align-items:center;gap:6px}
+    .badge{font-weight:600;padding:2px 10px;border-radius:12px;font-size:13px}
+    .badge.green{background:#00b89422;color:#00b894}
+    .badge.orange{background:#fdcb6e22;color:#fdcb6e}
+    .badge.dim{background:#636e7222;color:#636e72}
+    .grid{display:grid;grid-template-columns:1fr 400px;gap:20px;padding:20px;max-width:1400px;margin:0 auto}
+    .card{background:#1a1a25;border-radius:12px;border:1px solid #2a2a3a;overflow:hidden}
+    .card-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #2a2a3a;font-size:14px;font-weight:500}
+    .live{display:flex;align-items:center;gap:6px;font-size:12px;color:#00b894}
+    .dot{width:8px;height:8px;border-radius:50%;background:#00b894;animation:pulse 1.5s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+    .feed{position:relative;background:#000;aspect-ratio:4/3}
+    .feed img{width:100%;height:100%;object-fit:cover;display:block}
+    .feed .placeholder{display:flex;align-items:center;justify-content:center;height:100%;color:#444;font-size:14px}
+    .sidebar{display:flex;flex-direction:column;gap:16px}
+    .table-wrap{overflow-x:auto;font-size:13px}
+    table{width:100%;border-collapse:collapse}
+    th{text-align:left;padding:8px 12px;color:#666;font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:0.5px}
+    td{padding:8px 12px;border-top:1px solid #2a2a3a}
+    tr:hover td{background:#2a2a3a33}
+    .empty{padding:40px;text-align:center;color:#444;font-size:14px}
+    .status{font-size:11px;padding:2px 8px;border-radius:8px}
+    .status.in{background:#00b89422;color:#00b894;font-weight:600}
+    .status.out{background:#636e7222;color:#999;font-weight:600}
+    .btn{background:none;border:1px solid #2a2a3a;color:#e0e0e0;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px;transition:all .15s}
+    .btn:hover{background:#2a2a3a}
+    .btn.primary{background:#6c5ce7;border-color:#6c5ce7;color:#fff}
+    .btn.primary:hover{background:#5a4bd1}
+    .btn.danger{color:#e74c3c;border-color:#e74c3c33}
+    .btn.danger:hover{background:#e74c3c22}
+    .btn.outline{border-color:#2a2a3a}
+    .btn.sm{padding:4px 10px;font-size:12px}
+    .actions{display:flex;gap:6px}
+    .camera-toggle{font-size:20px;padding:4px 8px;line-height:1;border:none;background:none;cursor:pointer}
+    .modal-overlay{position:fixed;inset:0;background:#00000080;display:none;align-items:center;justify-content:center;z-index:100}
+    .modal-overlay.open{display:flex}
+    .modal{background:#1a1a25;border-radius:16px;padding:24px;width:380px;border:1px solid #2a2a3a}
+    .modal h3{font-size:18px;margin-bottom:12px}
+    .modal label{display:block;font-size:13px;color:#999;margin-bottom:4px}
+    .modal input{width:100%;padding:10px 14px;border-radius:8px;border:1px solid #2a2a3a;background:#0f0f15;color:#e0e0e0;font-size:14px;margin-bottom:12px;outline:none}
+    .modal input:focus{border-color:#6c5ce7}
+    .modal .hint{font-size:12px;color:#666;margin-bottom:16px}
+    .modal .btn-row{display:flex;gap:8px;justify-content:flex-end}
+    .toast-container{position:fixed;top:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px}
+    .toast{padding:12px 20px;border-radius:10px;font-size:13px;animation:slideIn .2s;box-shadow:0 8px 24px #00000040}
+    .toast.info{background:#6c5ce7;color:#fff}
+    .toast.error{background:#e74c3c;color:#fff}
+    .toast.success{background:#00b894;color:#fff}
+    @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}.sidebar{display:contents}}
+  </style>
+</head>
+<body>
+<header>
+  <h1><span>CV</span> Attendance</h1>
+  <div class="stats">
+    <div class="stat">Workers: <span class="badge green" id="statWorkers">0</span></div>
+    <div class="stat">Guests: <span class="badge orange" id="statGuests">0</span></div>
+    <div class="stat">In now: <span class="badge" id="statIn" style="background:#00b89422;color:#00b894">0</span></div>
+    <div class="stat"><a href="/admin" class="btn" style="border-color:#6c5ce7;color:#6c5ce7;text-decoration:none">👥 ادمین</a></div>
+    <div class="stat"><button class="btn" onclick="toggleCam()" id="camBtn" style="border-color:#6c5ce7;color:#6c5ce7">📷 دوربین</button></div>
+    <div class="stat" id="camStatus" style="font-size:12px;color:#666"></div>
+  </div>
+</header>
+
+<div class="grid">
+  <div class="card">
+    <div class="card-header"><span>Live Camera</span><span class="live"><span class="dot"></span> LIVE</span></div>
+    <div class="feed">
+      <img id="videoFeed" src="/video_feed" alt="feed" style="display:none" onerror="this.style.display='none';document.getElementById('camPlaceholder').style.display='flex'">
+      <div class="placeholder" id="camPlaceholder">Camera disabled — click toggle to start</div>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <div class="card">
+      <div class="card-header"><span>Workers</span><div class="actions"><button class="btn primary sm" onclick="showReg()">+ Register</button></div></div>
+      <div class="table-wrap" id="workersBody"><div class="empty">Loading...</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span>Today</span></div>
+      <div class="table-wrap" id="reportBody"><div class="empty">No data.</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="regModal">
+  <div class="modal">
+    <h3>Register Worker</h3>
+    <label>Full Name</label>
+    <input type="text" id="regName" placeholder="e.g. Ali Rezaei" autofocus>
+    <div class="hint">Look at the camera. System will capture 5 samples.</div>
+    <div class="btn-row">
+      <button class="btn outline" onclick="closeReg()">Cancel</button>
+      <button class="btn primary" onclick="startReg()">Capture &amp; Register</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="promoteModal">
+  <div class="modal">
+    <h3>New Face Detected</h3>
+    <p id="promoteMsg" style="font-size:14px;color:#999;margin-bottom:16px">Unknown face captured.</p>
+    <label>Register as</label>
+    <input type="text" id="promoteName" placeholder="Full name">
+    <div class="btn-row">
+      <button class="btn outline" onclick="dismiss()">Dismiss</button>
+      <button class="btn primary" onclick="promote()">Register</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script>
+function $(id){return document.getElementById(id)}
+function toast(m,t="info"){var e=document.createElement("div");e.className="toast "+t;e.textContent=m;$("toasts").appendChild(e);setTimeout(function(){e.remove()},3500)}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+async function api(path,opts){
+  if(!opts)opts={}
+  var timeout = path.includes("capture") ? 15000 : 5000
+  var ctrl=new AbortController()
+  var timer=setTimeout(function(){ctrl.abort()},timeout)
+  try{
+    var r=await fetch(path,{...opts,signal:ctrl.signal})
+    var d=await r.json()
+    if(!r.ok)throw new Error(d.detail||d.error||"Error")
+    return d
+  }finally{clearTimeout(timer)}
+}
+
+function showReg(){$("regModal").classList.add("open");$("regName").value="";setTimeout(function(){$("regName").focus()},100)}
+function closeReg(){$("regModal").classList.remove("open")}
+
+async function startReg(){
+  var n=$("regName").value.trim()
+  if(!n)return toast("Enter a name","error")
+  try{
+    await api("/api/workers/capture",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:n})})
+    toast("Worker registered!","success")
+    closeReg();refresh()
+  }catch(e){toast(e.message,"error")}
+}
+
+async function toggleCam(){
+  try{
+    var state = await api("/camera/status")
+    var willEnable = !state.enabled
+    var r=await api("/api/camera/toggle",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({enabled: willEnable})})
+    updateCamUI(r)
+    if(r.error) toast("دوربین: "+r.error,"error")
+  }catch(e){toast("خطا: "+e.message,"error")}
+}
+
+function updateCamUI(state){
+  var btn=$("camBtn"), st=$("camStatus")
+  if(state.enabled){
+    btn.textContent="⏹ خاموش"
+    btn.style.borderColor="#e74c3c";btn.style.color="#e74c3c"
+    $("videoFeed").style.display="block"
+    $("camPlaceholder").style.display="none"
+    st.textContent=state.is_open?"فعال ✅":"..."
+  }else{
+    btn.textContent="📷 روشن"
+    btn.style.borderColor="#6c5ce7";btn.style.color="#6c5ce7"
+    $("videoFeed").style.display="none"
+    $("camPlaceholder").style.display="flex"
+    st.textContent=state.error?"خطا: "+state.error:""
+  }
+}
+
+function showPromote(gid){
+  _pg=gid
+  $("promoteMsg").textContent='Unknown "'+gid+'". Register as worker?'
+  $("promoteName").value=""
+  $("promoteModal").classList.add("open")
+  setTimeout(function(){$("promoteName").focus()},100)
+}
+function closePromote(){$("promoteModal").classList.remove("open");_pg=null}
+
+async function promote(){
+  var n=$("promoteName").value.trim()
+  if(!n)return toast("Enter a name","error")
+  try{
+    await api("/api/unknown/promote",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:n})})
+    toast("Promoted!","success");closePromote();refresh()
+  }catch(e){toast(e.message,"error")}
+}
+
+async function dismiss(){
+  try{await api("/api/unknown/dismiss",{method:"POST"});closePromote()}catch(e){}
+}
+
+async function delWorker(id){
+  if(!confirm("Delete worker #"+id+"?"))return
+  try{await api("/api/workers/"+id,{method:"DELETE"});toast("Deleted","success");refresh()}
+  catch(e){toast(e.message,"error")}
+}
+
+var _pg=null
+var _busy=false
+
+async function refresh(){
+  if(_busy)return;_busy=true
+  try{
+    var d=await api("/api/dashboard")
+    $("statWorkers").textContent=d.worker_count
+    $("statGuests").textContent=d.guest_count
+    $("statIn").textContent=d.currently_in
+    updateCamUI({enabled:d.camera_enabled, is_open:d.camera_is_open, error:d.camera_error})
+    
+    var h='<table><thead><tr><th>ID</th><th>Name</th><th>Status</th><th></th></tr></thead><tbody>'
+    for(var i=0;i<d.workers.length;i++){
+      var w=d.workers[i]
+      var st = w.status=="in" ? "حاضر" : "خارج"
+      var sc = w.status=="in" ? "status in" : "status out"
+      h+='<tr><td>'+esc(w.id)+'</td><td>'+esc(w.name)+'</td><td><span class="'+esc(sc)+'">'+esc(st)+'</span></td><td><button class="btn danger sm" onclick="delWorker(\''+esc(w.id)+'\')">✕</button></td></tr>'
+    }
+    h+='</tbody></table>'
+    $("workersBody").innerHTML=h||'<div class="empty">No workers.</div>'
+    
+    if(d.unknown_guest&&!_pg)showPromote(d.unknown_guest)
+    
+    var r=await api("/api/attendance/report")
+    var rh='<table><thead><tr><th>Name</th><th>In</th><th>Out</th><th>Hours</th></tr></thead><tbody>'
+    for(var i=0;i<r.workers.length;i++){
+      var x=r.workers[i]
+      rh+='<tr><td>'+esc(x.name)+'</td><td>'+esc(x.first_in||"-")+'</td><td>'+esc(x.last_out||"-")+'</td><td>'+esc(x.total_hours||"-")+'</td></tr>'
+    }
+    rh+='</tbody></table>'
+    $("reportBody").innerHTML=rh||'<div class="empty">No data.</div>'
+  }catch(e){}
+  _busy=false
+}
+
+refresh()
+setInterval(refresh,5000)
+</script>
+</body>
+</html>

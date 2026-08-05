@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پنل ادمین - سامانه حضور و غیاب</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👥</text></svg>">
+    <style>
+        :root {
+            --primary: #1976d2;
+            --primary-dark: #1565c0;
+            --success: #2e7d32;
+            --warning: #ed6c02;
+            --danger: #c62828;
+            --bg: #f5f5f5;
+            --card: #ffffff;
+            --text: #212121;
+            --text-secondary: #757575;
+            --border: #e0e0e0;
+            --shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Arabic', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            line-height: 1.6;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+        header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border);
+        }
+        header h1 { margin: 0; font-size: 1.5rem; font-weight: 600; }
+        .header-actions { display: flex; gap: 12px; }
+        .btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 18px; border: none; border-radius: 8px;
+            font-size: 0.9rem; font-weight: 500; cursor: pointer;
+            transition: background 0.15s, transform 0.05s;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { background: #b71c1c; }
+        .btn-secondary { background: var(--border); color: var(--text); }
+        .btn-secondary:hover { background: #d0d0d0; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: var(--card); border-radius: 12px; padding: 20px; box-shadow: var(--shadow); }
+        .stat-label { color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 4px; }
+        .stat-value { font-size: 2rem; font-weight: 700; color: var(--primary); }
+        .section { background: var(--card); border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 24px; overflow: hidden; }
+        .section-header { padding: 16px 20px; border-bottom: 1px solid var(--border); font-weight: 600; font-size: 1.1rem; }
+        .section-body { padding: 0; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px 16px; text-align: right; border-bottom: 1px solid var(--border); }
+        th { background: #fafafa; font-weight: 600; color: var(--text-secondary); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #fafafa; }
+        .worker-row { cursor: pointer; }
+        .worker-row.expanded { background: #e3f2fd; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--border); }
+        .avatar-placeholder { width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; }
+        .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .status-in { background: #e8f5e9; color: var(--success); }
+        .status-out { background: #fce4ec; color: #c62828; }
+        .status-unknown { background: #fff3e0; color: var(--warning); }
+        .samples-table { width: 100%; border-collapse: collapse; margin: 8px 0 16px; font-size: 0.85rem; }
+        .samples-table th, .samples-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+        .samples-table th { background: #f5f5f5; }
+        .sample-thumb { width: 56px; height: 56px; border-radius: 6px; object-fit: cover; background: var(--border); cursor: zoom-in; display: block; }
+        .sample-thumb-missing { width: 56px; height: 56px; border-radius: 6px; background: #eee; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; text-align: center; }
+        .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1100; cursor: zoom-out; }
+        .lightbox.open { display: flex; }
+        .lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
+        .expanded-row { background: #fafafa; }
+        .expanded-content { padding: 0 20px 20px; }
+        .empty-state { padding: 40px; text-align: center; color: var(--text-secondary); }
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal.open { display: flex; }
+        .modal-content { background: var(--card); border-radius: 12px; padding: 24px; width: 100%; max-width: 420px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+        .modal h3 { margin-top: 0; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; }
+        .form-group input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; }
+        .form-group input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(25,118,210,0.15); }
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid transparent; border-top-color: currentColor; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .toast { position: fixed; bottom: 24px; left: 24px; background: var(--text); color: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); z-index: 1100; display: none; }
+        .toast.show { display: block; animation: slideUp 0.3s; }
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+        .guest-badge { background: #fff3e0; color: var(--warning); padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>👥 پنل مدیریت کارگرها</h1>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="showRegisterModal()">
+                <span>➕</span> ثبت کارگر جدید
+            </button>
+            <a href="/" class="btn btn-secondary">داشبورد</a>
+        </div>
+    </header>
+
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-label">کارگرهای فعال</div>
+            <div class="stat-value" id="statWorkers">-</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">مجموع نمونه‌های چهره</div>
+            <div class="stat-value" id="statSamples">-</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">مهمانان در انتظار</div>
+            <div class="stat-value" id="statGuests">-</div>
+        </div>
+    </div>
+
+    <section class="section">
+        <div class="section-header">کارگرهای ثبت‌نام‌شده</div>
+        <div class="section-body">
+            <table id="workersTable">
+                <thead>
+                    <tr>
+                        <th style="width:48px;"></th>
+                        <th>شناسه</th>
+                        <th>نام</th>
+                        <th>تاریخ ثبت</th>
+                        <th>نمونه‌ها</th>
+                        <th>وضعیت</th>
+                        <th style="width:120px;">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <div class="empty-state" id="emptyWorkers" style="display:none;">هیچ کارگری ثبت نشده است</div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="section-header">مهمانان ناشناس (منتظر تایید)</div>
+        <div class="section-body">
+            <table id="guestsTable">
+                <thead>
+                    <tr>
+                        <th style="width:48px;"></th>
+                        <th>شناسه</th>
+                        <th>اولین بازدید</th>
+                        <th>آخرین بازدید</th>
+                        <th style="width:140px;">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <div class="empty-state" id="emptyGuests" style="display:none;">هیچ مهمانی وجود ندارد</div>
+        </div>
+    </section>
+</div>
+
+<div class="modal" id="registerModal">
+    <div class="modal-content">
+        <h3>ثبت کارگر جدید</h3>
+        <p style="color:var(--text-secondary); margin-bottom:20px;">چهره را در کادر دوربین قرار دهید و دکمهٔ ثبت را بزنید. ۵ زاویه مختلف عکس گرفته می‌شود.</p>
+        <div class="form-group">
+            <label for="regName">نام کامل</label>
+            <input type="text" id="regName" placeholder="مثال: علی محمدی" required>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeRegisterModal()">انصراف</button>
+            <button class="btn btn-primary" onclick="startRegistration()">
+                <span id="regBtnText">شروع ثبت</span>
+                <span class="spinner" id="regSpinner" style="display:none;"></span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="promoteModal">
+    <div class="modal-content">
+        <h3>تبدیل مهمان به کارگر</h3>
+        <div class="form-group">
+            <label for="promoteName">نام کامل</label>
+            <input type="text" id="promoteName" placeholder="مثال: رضا احمدی" required>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closePromoteModal()">انصراف</button>
+            <button class="btn btn-primary" onclick="confirmPromote()">
+                <span id="promoteBtnText">تایید</span>
+                <span class="spinner" id="promoteSpinner" style="display:none;"></span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <img id="lightboxImg" alt="نمونه چهره">
+</div>
+
+<input type="file" id="sampleFileInput" accept="image/*" style="display:none;">
+
+<div class="toast" id="toast"></div>
+
+<script>
+let currentGuestId = null;
+
+async function fetchJSON(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+}
+
+function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + type;
+    setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function statusBadge(state) {
+    if (state === 'in') return '<span class="status-badge status-in">🟢 در محل</span>';
+    if (state === 'out') return '<span class="status-badge status-out">🔴 خارج</span>';
+    return '<span class="status-badge status-unknown">⚪ ناشناس</span>';
+}
+
+async function loadData() {
+    try {
+        const data = await fetchJSON('/api/admin/workers');
+        document.getElementById('statWorkers').textContent = data.worker_count;
+        document.getElementById('statSamples').textContent = data.sample_total;
+        document.getElementById('statGuests').textContent = data.guests.length;
+
+        renderWorkers(data.workers);
+        renderGuests(data.guests);
+    } catch (e) {
+        showToast('خطا در بارگذاری: ' + e.message, 'error');
+    }
+}
+
+function renderWorkers(workers) {
+    const tbody = document.querySelector('#workersTable tbody');
+    const empty = document.getElementById('emptyWorkers');
+    if (!workers.length) {
+        tbody.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+    }
+    empty.style.display = 'none';
+    tbody.innerHTML = workers.map(w => `
+        <tr class="worker-row" data-id="${w.id}" onclick="toggleWorker(this)">
+            <td>
+                ${w.has_image
+                    ? `<img class="avatar" src="/api/admin/face/${w.id}" alt="">`
+                    : `<div class="avatar-placeholder">${w.id.slice(-3)}</div>`
+                }
+            </td>
+            <td>${w.id}</td>
+            <td><strong>${w.name}</strong></td>
+            <td>${w.registered_at ? new Date(w.registered_at).toLocaleDateString('fa-IR') : '-'}</td>
+            <td><span style="font-weight:600; color:var(--primary)">${w.sample_count}</span></td>
+            <td>${statusBadge(w.status)}</td>
+            <td>
+                <button class="btn btn-primary" style="padding:6px 12px;font-size:0.8rem;" onclick="event.stopPropagation(); addSample('${w.id}')">
+                    + دوربین
+                </button>
+                <button class="btn btn-secondary" style="padding:6px 12px;font-size:0.8rem;" onclick="event.stopPropagation(); pickSampleFile('${w.id}')">
+                    + فایل
+                </button>
+                <button class="btn btn-danger" style="padding:6px 12px;font-size:0.8rem;" onclick="event.stopPropagation(); deleteWorker('${w.id}', '${w.name}')">
+                    حذف
+                </button>
+            </td>
+        </tr>
+        <tr class="expanded-row" id="expanded-${w.id}" style="display:none;">
+            <td colspan="7">
+                <div class="expanded-content">
+                    <table class="samples-table">
+                        <thead>
+                            <tr><th>ردیف</th><th>تصویر</th><th>شناسه نمونه</th><th>ابعاد بردار</th><th>کیفیت</th><th>تاریخ ثبت</th><th>عملیات</th></tr>
+                        </thead>
+                        <tbody>
+                            ${w.samples.map((s, i) => `
+                                <tr>
+                                    <td>${i + 1}</td>
+                                    <td>
+                                        ${s.has_image
+                                            ? `<img class="sample-thumb" src="/api/admin/samples/${w.id}/${s.id}" alt="نمونه ${i + 1}" onclick="showLightbox('/api/admin/samples/${w.id}/${s.id}')">`
+                                            : `<div class="sample-thumb-missing">بدون تصویر</div>`
+                                        }
+                                    </td>
+                                    <td><code style="font-size:0.75rem;">${s.id}</code></td>
+                                    <td>${s.dim || '-'}</td>
+                                    <td>${s.quality || '-'}</td>
+                                    <td>${s.created_at ? new Date(s.created_at).toLocaleString('fa-IR') : '-'}</td>
+                                    <td>
+                                        <button class="btn btn-danger" style="padding:4px 10px;font-size:0.75rem;" onclick="deleteSample('${w.id}', '${s.id}')">حذف</button>
+                                    </td>
+                                </tr>
+                            `).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text-secondary);">هیچ نمونهٔ جداگانه‌ای ذخیره نشده</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function toggleWorker(row) {
+    const id = row.dataset.id;
+    const expanded = document.getElementById('expanded-' + id);
+    const isOpen = expanded.style.display !== 'none';
+    expanded.style.display = isOpen ? 'none' : 'table-row';
+    row.classList.toggle('expanded', !isOpen);
+}
+
+function renderGuests(guests) {
+    const tbody = document.querySelector('#guestsTable tbody');
+    const empty = document.getElementById('emptyGuests');
+    if (!guests.length) {
+        tbody.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+    }
+    empty.style.display = 'none';
+    tbody.innerHTML = guests.map(g => `
+        <tr>
+            <td><div class="avatar-placeholder">?</div></td>
+            <td><code>${g.id}</code></td>
+            <td>${g.registered_at ? new Date(g.registered_at).toLocaleString('fa-IR') : '-'}</td>
+            <td>${g.last_seen ? new Date(g.last_seen).toLocaleString('fa-IR') : '-'}</td>
+            <td>
+                <button class="btn btn-primary" style="padding:6px 12px;font-size:0.8rem;" onclick="promoteGuest('${g.id}')">ارتقا به کارگر</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Registration flow
+function showRegisterModal() {
+    document.getElementById('regName').value = '';
+    document.getElementById('registerModal').classList.add('open');
+}
+function closeRegisterModal() {
+    document.getElementById('registerModal').classList.remove('open');
+}
+function closePromoteModal() {
+    document.getElementById('promoteModal').classList.remove('open');
+    currentGuestId = null;
+}
+
+async function startRegistration() {
+    const name = document.getElementById('regName').value.trim();
+    if (!name) { showToast('نام را وارد کنید', 'error'); return; }
+
+    const btn = document.querySelector('#registerModal .btn-primary');
+    const btnText = document.getElementById('regBtnText');
+    const spinner = document.getElementById('regSpinner');
+    btn.disabled = true; btnText.textContent = 'در حال ثبت...'; spinner.style.display = 'inline-block';
+
+    try {
+        const res = await fetch('/api/registration/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        if (!res.ok) throw new Error(await res.text());
+
+        // Poll until the 6-pose session finishes
+        let status;
+        for (let i = 0; i < 90; i++) {
+            await new Promise(r => setTimeout(r, 1000));
+            status = await fetchJSON('/api/registration/status');
+            if (!status.active) break;
+            if (status.is_done) break;
+            btnText.textContent = `مرحله ${status.step}/${status.total_steps} - ${status.current_pose}`;
+        }
+
+        if (!status || !status.is_done) {
+            await fetch('/api/registration/abort', { method: 'POST' });
+            throw new Error('زمان ثبت تمام شد یا خطا رخ داد');
+        }
+
+        btnText.textContent = 'ذخیره...';
+        const commit = await fetch('/api/registration/commit', { method: 'POST' });
+        if (!commit.ok) throw new Error(await commit.text());
+        const saved = await commit.json();
+
+        showToast(`کارگر "${saved.name}" با ${saved.samples} نمونه ثبت شد`, 'success');
+        closeRegisterModal();
+        loadData();
+    } catch (e) {
+        showToast('خطا: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false; btnText.textContent = 'شروع ثبت'; spinner.style.display = 'none';
+    }
+}
+
+function promoteGuest(id) {
+    currentGuestId = id;
+    document.getElementById('promoteName').value = '';
+    document.getElementById('promoteModal').classList.add('open');
+}
+
+async function confirmPromote() {
+    const name = document.getElementById('promoteName').value.trim();
+    if (!name) { showToast('نام را وارد کنید', 'error'); return; }
+
+    const btn = document.querySelector('#promoteModal .btn-primary');
+    const btnText = document.getElementById('promoteBtnText');
+    const spinner = document.getElementById('promoteSpinner');
+    btn.disabled = true; btnText.textContent = 'در حال ثبت...'; spinner.style.display = 'inline-block';
+
+    try {
+        const res = await fetch('/api/guests/' + currentGuestId + '/promote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        if (!res.ok) throw new Error(await res.text());
+
+        showToast(`مهمان به کارگر "${name}" ارتقا یافت`, 'success');
+        closePromoteModal();
+        loadData();
+    } catch (e) {
+        showToast('خطا: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false; btnText.textContent = 'تایید'; spinner.style.display = 'none';
+    }
+}
+
+async function addSample(wid) {
+    if (!confirm(`یک نمونه چهره جدید برای ${wid} از دوربین ثبت شود؟`)) return;
+    try {
+        const res = await fetch('/api/admin/workers/' + wid + '/samples', { method: 'POST' });
+        if (!res.ok) throw new Error(await res.text());
+        showToast('نمونه اضافه شد', 'success');
+        loadData();
+    } catch (e) {
+        showToast('خطا: ' + e.message, 'error');
+    }
+}
+
+// Manual sample: one hidden <input type=file> is reused for every worker, so
+// the handler is rebound on each click to know which worker to upload for.
+function pickSampleFile(wid) {
+    const input = document.getElementById('sampleFileInput');
+    input.value = '';
+    input.onchange = () => {
+        if (input.files.length) uploadSample(wid, input.files[0]);
+    };
+    input.click();
+}
+
+async function uploadSample(wid, file) {
+    const body = new FormData();
+    body.append('file', file);
+    showToast('در حال پردازش تصویر...');
+    try {
+        const res = await fetch(`/api/admin/workers/${wid}/samples/upload`, { method: 'POST', body });
+        if (!res.ok) throw new Error(await res.text());
+        showToast('نمونه از فایل اضافه شد', 'success');
+        loadData();
+    } catch (e) {
+        showToast('خطا: ' + e.message, 'error');
+    }
+}
+
+async function deleteSample(wid, sid) {
+    if (!confirm('این نمونه حذف شود؟ کارگر باید حداقل یک نمونه داشته باشد.')) return;
+    try {
+        const res = await fetch('/api/admin/workers/' + wid + '/samples/' + sid, { method: 'DELETE' });
+        if (!res.ok) throw new Error(await res.text());
+        showToast('نمونه حذف شد', 'success');
+        loadData();
+    } catch (e) {
+        showToast('خطا: ' + e.message, 'error');
+    }
+}
+
+async function deleteWorker(wid, name) {
+    if (!confirm(`کارگر "${name}" (${wid}) و همهٔ نمونه‌های چهره‌اش حذف شود؟\nسابقهٔ حضور و غیاب باقی می‌ماند.`)) return;
+    try {
+        const res = await fetch('/api/admin/workers/' + wid, { method: 'DELETE' });
+        if (!res.ok) throw new Error(await res.text());
+        showToast(`کارگر "${name}" حذف شد`, 'success');
+        loadData();
+    } catch (e) {
+        showToast('خطا: ' + e.message, 'error');
+    }
+}
+
+function showLightbox(src) {
+    document.getElementById('lightboxImg').src = src;
+    document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('open');
+}
+
+// Auto-refresh every 10s
+loadData();
+setInterval(loadData, 10000);
+</script>
+</body>
+</html>

@@ -38,9 +38,9 @@ Watch the full presentation and demonstration of the project here:
 
 | Name | Student ID | GitHub Profile | Role / Contribution |
 | :--- | :--- | :--- | :--- |
-| [Hamed Nabipour](حامد نبی‌پور) | `40222153` | [@username](https://github.com/username) | Machine Vision Pipeline (Detection, Quality, Liveness, Tracking) |
-| [Sina Hasanpour](سینا حسن‌پور) | `40216723` | [@username](https://github.com/username) | Data Layer & Business Logic (DB Schema, Guest Logic, Cooldown) |
-| [AmirMohammad Ahmadi](امیرمحمد احمدی) | `40214403` | [@username](https://github.com/username) | Web, API & Security (FastAPI, Real-time Stream, JWT/RBAC) |
+| [Hamed Nabipour](حامد نبی‌پور) | `40222153` | [@hamwynp](https://github.com/hamwynp) | Machine Vision Pipeline (Detection, Quality, Liveness, Tracking) |
+| [Sina Hasanpour](سینا حسن‌پور) | `40216723` | [@sina-hpk](https://github.com/sina-hpk) | Data Layer & Business Logic (DB Schema, Guest Logic, Cooldown) |
+| [AmirMohammad Ahmadi](امیرمحمد احمدی) | `40214403` | [@amirmohammad-84](https://github.com/amirmohammad-84) | Web, API & Security (FastAPI, Real-time Stream, JWT/RBAC) |
 
 ---
 
@@ -91,7 +91,7 @@ MachineVision-2026-FaceAttendance/
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/YourUsername/MachineVision-2026-FaceAttendance.git
+   git clone https://github.com/sina-hpk/MachineVision-2026-FaceAttendance.git
    ```
 
 2. Navigate to the directory:

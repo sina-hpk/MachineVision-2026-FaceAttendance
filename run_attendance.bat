@@ -4,36 +4,28 @@ chcp 65001 >nul
 
 echo.
 echo =========================================
-echo   CV Attendance System - Auto Launcher
+echo   CV Attendance System - Windows Launcher
 echo =========================================
 echo.
 
-REM Use the project's virtual environment if it exists
-set PYTHON=python
-if exist ".venv\Scripts\python.exe" set PYTHON=.venv\Scripts\python.exe
-
-echo Using: %PYTHON%
-echo.
-
-REM Kill any existing python processes on port 8000
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8000" ^| findstr "LISTENING"') do (
-    taskkill /F /PID %%a >nul 2>&1
+REM Check if Python is available
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: Python not found in PATH.
+    echo Please install Python 3.11+ from https://python.org
+    echo Make sure to check "Add Python to PATH" during installation.
+    pause
+    exit /b 1
 )
 
-echo [1/3] Starting server (FastAPI)...
-start /min cmd /c "%PYTHON% -m uvicorn main_fastapi:app --host 0.0.0.0 --port 8000"
+echo [1/3] Running unified launcher (run.py)...
+echo.
 
-echo [2/3] Waiting for server to start...
-timeout /t 6 >nul
-
-echo [3/3] Opening browser...
-start "" "http://localhost:8000"
+python run.py %*
 
 echo.
 echo =========================================
-echo  SERVER RUNNING AT: http://localhost:8000
-echo  API Docs (Swagger): http://localhost:8000/docs
-echo  Press Ctrl+C in the server window to stop
+echo  Launcher finished.
 echo =========================================
 echo.
 pause

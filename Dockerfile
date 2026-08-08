@@ -1,14 +1,16 @@
 # CV Attendance System - Dockerfile
-# Multi-stage build for production
+# Multi-stage build for production (Linux containers)
 
-# Build stage
+# Build stage: install Python deps (heavy native builds: dlib, insightface)
 FROM python:3.11-slim as builder
 
-# Install system dependencies for building
+# System deps required to BUILD native extensions (dlib needs cmake)
+# Note: on Debian Trixie (base of python:3.11-slim) the package is `libgl1`
+#       (libgl1-mesa-glx was removed).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
@@ -16,34 +18,33 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /app
 
-# Install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 # Production stage
 FROM python:3.11-slim as production
 
-# Install runtime dependencies
+# Runtime libraries only (no compiler needed)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
     libxrender-dev \
     libgomp1 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 
-# Set working directory
 WORKDIR /app
 
-# Copy Python dependencies from builder
-COPY --from=builder /root/.local /home/appuser/.local
+# Copy installed packages from build stage
+ENV PYTHONPATH=/install/lib/python3.11/site-packages
+COPY --from=builder /install /install
 
 # Copy application code
 COPY --chown=appuser:appuser . .
@@ -52,18 +53,20 @@ COPY --chown=appuser:appuser . .
 RUN mkdir -p /app/data/faces /app/data/attendance && \
     chown -R appuser:appuser /app/data
 
+# Non-root user needs a writable HOME: InsightFace downloads its model
+# weights to ~/.insightface on first use and the process refuses to start
+# without a writable home directory.
+ENV HOME=/home/appuser
+
 # Switch to non-root user
 USER appuser
-
-# Add local packages to PATH
-ENV PATH=/home/appuser/.local/bin:$PATH
 
 # Expose port
 EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/healthz', timeout=5)" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz', timeout=5)" || exit 1
 
-# Run the application
+# Run the application (workers=1: the camera thread must not be duplicated)
 CMD ["python", "-m", "uvicorn", "main_fastapi:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

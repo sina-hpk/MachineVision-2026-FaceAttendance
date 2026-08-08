@@ -154,8 +154,14 @@ class FaceRecognizer:
     def open(self, index: int = 0) -> bool:
         """Open camera with simple, safe configuration."""
         import concurrent.futures
+        import platform
         def _open():
-            cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+            # CAP_DSHOW is Windows-only and does not exist on Linux/macOS
+            # builds of OpenCV, so pick the backend per-platform.
+            if platform.system() == "Windows":
+                cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+            else:
+                cap = cv2.VideoCapture(index)
             if not cap.isOpened():
                 cap.release()
                 return None

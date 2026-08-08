@@ -1,0 +1,961 @@
+% ================================================================
+%  راهنمای کامل پروژه سیستم حضور و غیاب با تشخیص چهره (CV Attendance)
+%  کامپایل:  xelatex ارائه_پروژه_راهنمای_کامل.tex
+%  (دو بار اجرا کنید تا فهرست مطالب کامل شود)
+%
+%  پیش‌نیاز فونت‌ها (روی ویندوز معمولاً نصب‌اند یا از اینترنت بگیرید):
+%    - فونت فارسی: Vazirmatn  (اگر نبود، خط \setmainfont را به یک فونت
+%      فارسی نصب‌شده مثل  "B Nazanin"  یا  "Tahoma"  تغییر دهید)
+%    - فونت کد: Consolas  (روی ویندوز موجود است)
+% ================================================================
+\documentclass[12pt,a4paper]{article}
+
+\usepackage{fontspec}
+\usepackage{xepersian}
+
+% --- فونت‌ها ---
+% فونت اصلی فارسی. اگر Vazirmatn نصب نیست، این خط را به فونت دلخواه تغییر دهید.
+\settextfont[Scale=1.0]{Vazirmatn}
+% اگر Vazirmatn نداری، خط بالا را کامنت و خط زیر را باز کن:
+% \settextfont[Scale=1.0]{Tahoma}
+
+\newfontfamily\codefont[Scale=0.9]{Consolas}
+
+% --- بسته‌ها ---
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{mdframed}
+\usepackage{enumitem}
+
+% --- رنگ‌ها ---
+\definecolor{codebg}{HTML}{F4F6F9}
+\definecolor{codeframe}{HTML}{C7D0DE}
+\definecolor{kw}{HTML}{0B5FA5}
+\definecolor{cmt}{HTML}{5B7A5B}
+\definecolor{str}{HTML}{A03030}
+\definecolor{accent}{HTML}{1F5F9E}
+\definecolor{quotebg}{HTML}{EAF2FC}
+
+% --- لینک‌ها ---
+\hypersetup{
+  colorlinks=true,
+  linkcolor=accent,
+  urlcolor=accent,
+  citecolor=accent,
+}
+
+% --- تنظیم بلوک کد (چپ‌چین، انگلیسی) ---
+\lstset{
+  basicstyle=\codefont\small,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{codeframe},
+  keywordstyle=\color{kw}\bfseries,
+  commentstyle=\color{cmt}\itshape,
+  stringstyle=\color{str},
+  showstringspaces=false,
+  breaklines=true,
+  breakatwhitespace=false,
+  columns=fullflexible,
+  keepspaces=true,
+  xleftmargin=6pt,
+  xrightmargin=6pt,
+  aboveskip=8pt,
+  belowskip=8pt,
+  language=Python,
+}
+
+% محیط کوت (نقل قول / نکته)
+\newmdenv[
+  backgroundcolor=quotebg,
+  linecolor=accent,
+  linewidth=2pt,
+  topline=false,bottomline=false,rightline=false,
+  skipabove=8pt,skipbelow=8pt,
+  innerleftmargin=10pt,innerrightmargin=10pt,
+  innertopmargin=8pt,innerbottommargin=8pt,
+]{note}
+
+\title{\vspace{-1cm}\textbf{راهنمای کامل پروژه\\ سیستم حضور و غیاب با تشخیص چهره (CV Attendance)}}
+\author{تیم توسعه: حامد نبی‌پور، سینا حسن‌پور، امیرمحمد احمدی}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{note}
+این سند برای ارائه‌ی کلاسی نوشته شده. هدف این است که حتی اگر پایتون و بینایی ماشین بلد نیستی، بتوانی کل پروژه را بفهمی و از روی آن اسلاید بسازی. هر اصطلاح فنی جایی که اولین بار می‌آید، توضیح داده می‌شود.
+\end{note}
+
+\tableofcontents
+\newpage
+
+% ================================================================
+\section{پروژه در یک نگاه}
+% ================================================================
+
+\textbf{این پروژه چه می‌کند؟}
+یک سیستم \textbf{حضور و غیاب خودکار} است که به‌جای انگشت‌زنی یا کارت، از \textbf{چهره‌ی افراد} استفاده می‌کند. یک دوربین (وب‌کم) تصویر زنده می‌گیرد، سیستم چهره‌ها را پیدا می‌کند، تشخیص می‌دهد این چهره متعلق به کدام کارمند ثبت‌شده است، و ساعت \textbf{ورود (اولین دیده‌شدن)} و \textbf{خروج (آخرین دیده‌شدن)} او را در یک دیتابیس ذخیره می‌کند. یک صفحه‌ی وب (داشبورد) هم تصویر زنده و گزارش حضور را نشان می‌دهد.
+
+\textbf{ورودی و خروجی سیستم:}
+\begin{itemize}[rightmargin=0pt]
+  \item \textbf{ورودی:} فریم‌های ویدیویی زنده از دوربین.
+  \item \textbf{خروجی:} جدول حضور روزانه (چه کسی، از ساعت چند تا چند، چند ساعت کار کرد) به‌علاوه‌ی خروجی CSV (فایل اکسل‌مانند).
+\end{itemize}
+
+\textbf{سه بخش اصلی:}
+\begin{enumerate}[rightmargin=0pt]
+  \item \textbf{موتور تشخیص چهره} (بینایی ماشین و هوش مصنوعی) — فایل \lr{\texttt{face\_recognizer.py}}
+  \item \textbf{داده و منطق حضور} (دیتابیس و محاسبه‌ی ساعت کار) — پوشه‌ی \lr{\texttt{models/}} و \lr{\texttt{attendance.py}}
+  \item \textbf{وب و API} (داشبورد، پنل ادمین، امنیت) — \lr{\texttt{main\_fastapi.py}} و \lr{\texttt{auth.py}}
+\end{enumerate}
+
+% ================================================================
+\section{واژه‌نامه}
+% ================================================================
+این جدول را قبل از ارائه بخوان. اگر داور بپرسد «فلان کلمه یعنی چه؟» باید بلد باشی.
+
+\begin{longtable}{|p{3.2cm}|p{3cm}|p{8cm}|}
+\hline
+\textbf{اصطلاح} & \textbf{معنی ساده} & \textbf{توضیح} \\
+\hline
+\endhead
+\lr{CV} (بینایی ماشین) & بینایی ماشین & علمی که به کامپیوتر یاد می‌دهد از روی تصویر «بفهمد» چه چیزی می‌بیند. \\
+\hline
+\lr{Frame} & قاب / تصویر لحظه‌ای & ویدیو در واقع تعداد زیادی عکس پشت سر هم است. هر عکس یک «فریم» است. مثلاً ۳۰ فریم در ثانیه. \\
+\hline
+\lr{Face Detection} & آشکارسازی چهره & فقط پیدا می‌کند در تصویر چهره کجاست. هنوز نمی‌داند چه کسی است. \\
+\hline
+\lr{Face Recognition} & شناسایی چهره & بعد از پیدا کردن چهره، تشخیص می‌دهد متعلق به کدام فرد ثبت‌شده است. \\
+\hline
+\lr{Embedding} & امضای عددی صورت & مهم‌ترین مفهوم پروژه. یک لیست از اعداد (بردار) که هویت ریاضیِ یک صورت است. توضیح کامل در بخش ۵. \\
+\hline
+\lr{Vector} (بردار) & لیستی از اعداد & مثل \lr{\texttt{[0.12, -0.98, ...]}}. در این پروژه ۵۱۲ عدد. \\
+\hline
+\lr{512-dim} & بردار ۵۱۲ عددی & امضای هر صورت دقیقاً ۵۱۲ عدد است. هرچه بلندتر، توصیف دقیق‌تر. \\
+\hline
+\lr{InsightFace} & نام کتابخانه & ابزار آماده و قوی برای چهره که هم چهره را پیدا می‌کند و هم بردار می‌سازد. \\
+\hline
+\lr{ArcFace} & مدل هوش مصنوعی & مدلی که تصویر صورت را به بردار ۵۱۲ عددی تبدیل می‌کند (داخل \lr{InsightFace}). \\
+\hline
+\lr{RetinaFace / SCRFD} & آشکارساز چهره & مدلی که چهره‌ها را در تصویر پیدا می‌کند. \lr{SCRFD} نسخه‌ی سریع‌تر است. \\
+\hline
+\lr{dlib} & کتابخانه‌ی جایگزین & روش قدیمی‌تر با بردار ۱۲۸ عددی. فقط «پشتیبان» است اگر \lr{InsightFace} کار نکند. \\
+\hline
+\lr{Cosine Similarity} & شباهت کسینوسی & عددی بین ۱- تا ۱. هرچه به ۱ نزدیک‌تر، دو صورت شبیه‌ترند. \\
+\hline
+\lr{Euclidean Distance} & فاصله اقلیدسی & فاصله‌ی مستقیم دو نقطه؛ در روش \lr{dlib} برای مقایسه. \\
+\hline
+\lr{Tolerance} & آستانه تحمل & تعیین می‌کند چقدر تفاوت را «همان آدم» حساب کنیم. \\
+\hline
+\lr{Pipeline} & خط لوله & داده از مرحله‌ای به مرحله‌ی بعد می‌رود: دوربین $\rightarrow$ تشخیص $\rightarrow$ مقایسه $\rightarrow$ ثبت. \\
+\hline
+\lr{Landmark} & نقاط کلیدی چهره & مختصات چشم، بینی، دهان. برای هم‌ترازی و تشخیص زنده‌بودن. \\
+\hline
+\lr{Alignment} & هم‌ترازی & چرخاندن صورت کج تا صاف شود، چون مدل روی صورت صاف بهتر کار می‌کند. \\
+\hline
+\lr{Liveness} & زنده‌بودن & جلوگیری از تقلب؛ اگر کسی عکس چاپی یا موبایل جلوی دوربین بگیرد باید رد شود. \\
+\hline
+\lr{Tracking} & ردیابی & یک صورت را بین فریم‌های پشت سر هم دنبال می‌کند تا تشخیص پایدارتر شود. \\
+\hline
+\lr{Quality} & ارزیابی کیفیت & چک می‌کند صورت تار، تاریک یا خیلی کج نباشد. \\
+\hline
+\lr{SQLite} & نوع دیتابیس & دیتابیس ساده‌ای که در یک فایل ذخیره می‌شود: \lr{\texttt{cv\_attendance.db}}. \\
+\hline
+\lr{ORM} & نگاشت شیء-رابطه‌ای & به‌جای دستورات پیچیده‌ی دیتابیس، با کلاس‌های پایتون کار می‌کنیم. اینجا \lr{SQLAlchemy}. \\
+\hline
+\lr{Migration} & تغییر ساختار دیتابیس & وقتی جدول یا ستون جدید لازم داریم. ابزارش \lr{Alembic} است. \\
+\hline
+\lr{API} & رابط برنامه‌نویسی & «آدرس»هایی مثل \lr{\texttt{/workers}} که برنامه‌ی دیگر صدا می‌زند. \\
+\hline
+\lr{FastAPI} & فریم‌ورک وب & ابزار ساخت \lr{API} و سرور وب با پایتون. \\
+\hline
+\lr{MJPEG} & پخش ویدیو & پخش زنده با فرستادن پشت‌سرهم عکس‌های \lr{JPEG}. \\
+\hline
+\lr{Event Loop} & حلقه رویداد & بخشی که درخواست‌ها را نوبتی مدیریت می‌کند. اگر کار سنگین قفلش کند، همه کند می‌شوند. \\
+\hline
+\lr{Thread Pool} & استخر نخ & کار سنگین را به نخ جدا می‌سپاریم تا سرور کند نشود. \\
+\hline
+\lr{JWT} & توکن امنیتی & «بلیت» رمزنگاری‌شده که ثابت می‌کند کاربر کیست، بدون فرستادن هربارِ رمز. \\
+\hline
+\lr{RBAC} & دسترسی نقش‌محور & هر کاربر یک «نقش» دارد و هر نقش اجازه‌های مشخصی. \\
+\hline
+\lr{Guest} & مهمان & چهره‌ی ناشناسِ دیده‌شده ولی ثبت‌نشده. حضورش ثبت نمی‌شود تا «کارمند» شود. \\
+\hline
+\lr{Augmentation} & تقویت نمونه & وقتی فرد با زاویه/نور دیگر دیده شود، بردار جدیدش ذخیره می‌شود تا تشخیص بهتر شود. \\
+\hline
+\end{longtable}
+
+% ================================================================
+\section{پیش‌زمینه‌های لازم}
+% ================================================================
+قبل از اینکه وارد کد شویم، این چهار مفهوم پایه را باید بفهمی. اینها ستون فقرات کل پروژه‌اند.
+
+\subsection{تصویر برای کامپیوتر یعنی «عدد»}
+کامپیوتر عکس را نمی‌بیند؛ عکس برای او یک \textbf{جدول از اعداد} است. هر نقطه‌ی تصویر (پیکسل) سه عدد دارد: میزان قرمز، سبز و آبی (\lr{RGB}) بین ۰ تا ۲۵۵. پس یک تصویر رنگی $640\times480$ در واقع یک آرایه‌ی سه‌بعدی از اعداد است. کتابخانه‌ای که این آرایه‌ها را مدیریت می‌کند \lr{\textbf{NumPy}} نام دارد و کتابخانه‌ای که کار تصویری انجام می‌دهد \lr{\textbf{OpenCV (cv2)}} است.
+
+\begin{note}
+نکته: \lr{OpenCV} رنگ‌ها را به ترتیب \lr{\textbf{BGR}} (آبی-سبز-قرمز) نگه می‌دارد، نه \lr{RGB}. برای همین در کد جاهایی \lr{\texttt{cvtColor(..., COLOR\_BGR2RGB)}} می‌بینی؛ یعنی تبدیل ترتیب رنگ.
+\end{note}
+
+\subsection{بردار و «شباهت»}
+بردار یعنی یک لیست از اعداد. هر بردار را می‌توان یک «نقطه» یا «جهت» در فضا تصور کرد. ایده‌ی کلیدی پروژه این است:
+\begin{note}
+اگر بتوانیم هر صورت را به یک بردار تبدیل کنیم، آن‌گاه \textbf{صورت‌های شبیه، بردارهای نزدیک} خواهند داشت. پس «تشخیص چهره» تبدیل می‌شود به «مقایسه‌ی دو بردار».
+\end{note}
+
+\subsection{مدل هوش مصنوعی (شبکه عصبی)}
+یک \textbf{مدل} (اینجا \lr{ArcFace}) برنامه‌ای است که قبلاً روی میلیون‌ها عکس صورت «آموزش دیده». کار آن این است: تصویر یک صورت را بگیرد و بردار ۵۱۲ عددی آن را بدهد. ما این مدل را آموزش نداده‌ایم؛ آن را \textbf{آماده (pre-trained)} استفاده می‌کنیم. مدل به فرمت \lr{\textbf{ONNX}} ذخیره شده و با \lr{\textbf{ONNX Runtime}} اجرا می‌شود.
+
+\subsection{سرور، دیتابیس و API}
+\begin{itemize}[rightmargin=0pt]
+  \item \textbf{سرور:} برنامه‌ای که همیشه روشن است و به درخواست‌های مرورگر پاسخ می‌دهد.
+  \item \textbf{دیتابیس:} انبار داده‌ی ماندگار (حتی بعد از خاموش شدن برنامه باقی می‌ماند).
+  \item \textbf{API:} پل ارتباطی؛ مرورگر با فرستادن درخواست به آدرس‌هایی مثل \lr{\texttt{/api/dashboard}}، داده می‌گیرد.
+\end{itemize}
+
+% ================================================================
+\section{معماری کلی سیستم}
+% ================================================================
+مسیر کلی داده در سیستم («خط لوله» یا \lr{Pipeline}) به این شکل است:
+
+\begin{latin}
+\begin{lstlisting}[language=,numbers=none]
+Camera (webcam)
+   |  raw_frame
+   v
+Face Detection (RetinaFace / SCRFD)   -> where is the face?
+   |  box + landmarks
+   v
+Quality Assessment                    -> not blurry / dark
+   v
+Build 512-d vector (ArcFace)          -> numeric signature
+   v
+Match against DB (cosine similarity)  -> who is it?
+   v
+Liveness check                        -> not a photo
+   v
+Tracking                              -> stabilize identity
+   v
+Attendance -> Database -> Web dashboard
+\end{lstlisting}
+\end{latin}
+
+این توضیح دقیقاً در بالای فایل \lr{\texttt{face\_recognizer.py}} به‌صورت کامنت آمده:
+
+\begin{latin}
+\begin{lstlisting}[language=,numbers=none]
+Pipeline:
+  Frame -> RetinaFace detect -> Quality gate -> ArcFace encode ->
+  Match DB -> Liveness check -> Kalman tracking -> Augmentation
+\end{lstlisting}
+\end{latin}
+
+\textbf{سه لایه‌ی نرم‌افزار:}
+\begin{enumerate}[rightmargin=0pt]
+  \item \textbf{لایه‌ی بینایی:} \lr{\texttt{face\_recognizer.py}} و پوشه‌ی \lr{\texttt{cv\_modules/}}.
+  \item \textbf{لایه‌ی داده:} پوشه‌ی \lr{\texttt{models/}} و \lr{\texttt{attendance.py}}.
+  \item \textbf{لایه‌ی وب:} \lr{\texttt{main\_fastapi.py}}، \lr{\texttt{auth.py}} و پوشه‌ی \lr{\texttt{templates/}}.
+\end{enumerate}
+
+% ================================================================
+\section{قلب پروژه: بردار چهره}
+% ================================================================
+این بخش دقیقاً جوابِ سوال توست: «وقتی می‌گویی از صورت بردار ریاضی برمی‌دارد، دقیقاً چطور، کِی، چه می‌کند، کجا ذخیره می‌شود و چطور مقایسه می‌شود؟»
+
+\subsection{«برداشتن بردار» دقیقاً یعنی چه؟}
+منظور از «بردار برداشتن از صورت» این است: تصویرِ کوچکِ صورت را به مدل \lr{ArcFace} می‌دهیم، و مدل یک آرایه‌ی ۵۱۲ عددی برمی‌گرداند. این ۵۱۲ عدد، \textbf{امضای یکتای آن صورت} است. صورت‌های یک نفر، امضاهای نزدیک به هم دارند؛ صورت‌های دو نفر متفاوت، امضاهای دور از هم.
+
+\subsection{کِی و کجا بردار ساخته می‌شود؟}
+مدل \lr{InsightFace} هنگام راه‌اندازی برنامه یک بار بارگذاری می‌شود. این کار در سازنده‌ی کلاس \lr{\texttt{FaceRecognizer}} انجام می‌شود:
+
+\begin{latin}
+\begin{lstlisting}
+from insightface.app import FaceAnalysis as InsightFaceAnalysis
+self._insightface_app = InsightFaceAnalysis(
+    name="buffalo_l",
+    providers=["CPUExecutionProvider"],
+    allowed_modules=["detection", "recognition"],
+)
+det = int(insightface_det_size)
+self._insightface_app.prepare(ctx_id=-1, det_size=(det, det))
+\end{lstlisting}
+\end{latin}
+
+توضیح خط به خط:
+\begin{itemize}[rightmargin=0pt]
+  \item \lr{\texttt{name="buffalo\_l"}}: کدام بسته‌ی مدل استفاده شود.
+  \item \lr{\texttt{providers=["CPUExecutionProvider"]}}: مدل روی \textbf{پردازنده (CPU)} اجرا شود، نه کارت گرافیک.
+  \item \lr{\texttt{allowed\_modules=["detection", "recognition"]}}: فقط دو کار لازم را روشن کن: پیدا کردن چهره و ساختن بردار. (ماژول‌های اضافی مثل تشخیص سن/جنسیت خاموش شده‌اند تا سرعت بالا برود — سرعت هر فریم را از حدود ۷۴۰ به ۶۲۵ میلی‌ثانیه رسانده است.)
+  \item \lr{\texttt{det\_size=(det, det)}}: اندازه‌ای که تصویر برای آشکارسازی به آن تغییر می‌کند. \textbf{باید مربع باشد} (مثلاً $320\times320$).
+\end{itemize}
+
+\begin{note}
+\textbf{این همان باگِ معروف پروژه است (خطای \lr{SCRFD broadcast}).} اگر اندازه مربع نباشد (مثلاً $320\times240$)، آشکارساز \lr{SCRFD} خطای «broadcast» می‌دهد چون شبکه‌ی نقاط لنگر (anchor) را از ارتفاع می‌سازد و برای هر دو محور به کار می‌برد:
+\begin{latin}
+\begin{lstlisting}[language=,numbers=none]
+# det_size must be square: SCRFD builds its anchor grid from the
+# input height for both axes, so a non-square size such as
+# (320, 240) raises "operands could not be broadcast together
+# with shapes (140,) (160,)" inside distance2bbox().
+\end{lstlisting}
+\end{latin}
+راه‌حل: پارامتر به \lr{\texttt{det\_size=(320, 320)}} اصلاح شد. (این کار حامد نبی‌پور است — بخش ۱۰.)
+\end{note}
+
+\subsection{مرحله‌ی ساخت بردار در عمل}
+تابع اصلی که هر فریم را پردازش می‌کند \lr{\texttt{recognize}} است، که کار را به \lr{\texttt{\_recognize\_insightface}} می‌سپارد. در آن‌جا با یک فراخوانی، هم چهره‌ها پیدا می‌شوند و هم بردارشان ساخته می‌شود:
+
+\begin{latin}
+\begin{lstlisting}
+dets = self._insightface_app.get(frame)
+\end{lstlisting}
+\end{latin}
+
+سپس برای هر چهره‌ی پیداشده، بردار آماده است و فقط از آن خوانده می‌شود:
+
+\begin{latin}
+\begin{lstlisting}
+# ArcFace embedding (512-dim from InsightFace)
+encoding = det.embedding  # Already computed by InsightFace
+if encoding is None or encoding.size == 0:
+    continue
+
+# Normalize encoding for cosine similarity
+encoding_norm = encoding / (np.linalg.norm(encoding) + 1e-8)
+\end{lstlisting}
+\end{latin}
+
+توضیح:
+\begin{itemize}[rightmargin=0pt]
+  \item \lr{\texttt{det.embedding}} همان بردار ۵۱۲ عددی خام است که مدل ساخته.
+  \item خط \lr{\texttt{encoding\_norm = ...}} بردار را \textbf{نرمال‌سازی} می‌کند؛ یعنی طول بردار را ۱ می‌کند. این کار لازم است تا بتوانیم با \textbf{شباهت کسینوسی} مقایسه کنیم. \lr{\texttt{np.linalg.norm}} طول بردار را حساب می‌کند و \lr{\texttt{1e-8}} اضافه شده تا اگر طول صفر شد، تقسیم بر صفر رخ ندهد.
+\end{itemize}
+
+\subsection{کجا و به چه شکل ذخیره می‌شود؟}
+هنگام \textbf{ثبت‌نام} یک کارمند، بردارهایش در دیتابیس ذخیره می‌شوند. ذخیره‌سازی در جدول \lr{\texttt{face\_encodings}} انجام می‌شود. در تابع \lr{\texttt{add\_worker}}:
+
+\begin{latin}
+\begin{lstlisting}
+for i, enc in enumerate(encodings):
+    fe = FaceEncoding(
+        worker_id=worker.id,
+        encoding=enc.tolist(),   # convert to plain list, stored as JSON
+        quality_score="0.5",
+    )
+    db.add(fe)
+\end{lstlisting}
+\end{latin}
+
+نکات:
+\begin{itemize}[rightmargin=0pt]
+  \item \lr{\texttt{enc.tolist()}}: بردار \lr{NumPy} به یک لیست معمولی پایتون تبدیل می‌شود تا بتوان آن را به‌شکل \textbf{JSON} در دیتابیس ذخیره کرد.
+  \item ستون \lr{\texttt{encoding}} در مدل، از نوع \lr{JSON} تعریف شده:
+\begin{latin}
+\begin{lstlisting}
+encoding = Column(JSON, nullable=False)  # JSON array of floats
+\end{lstlisting}
+\end{latin}
+  \item یک کارمند می‌تواند \textbf{چند بردار} داشته باشد (از زوایای مختلف)، چون رابطه‌ی «یک کارمند به چند بردار» تعریف شده:
+\begin{latin}
+\begin{lstlisting}
+encodings = relationship("FaceEncoding", back_populates="worker",
+                         cascade="all, delete-orphan")
+\end{lstlisting}
+\end{latin}
+  \lr{\texttt{cascade="all, delete-orphan"}} یعنی اگر کارمند حذف شد، بردارهایش هم خودکار حذف می‌شوند.
+\end{itemize}
+
+\begin{note}
+\textbf{کجا فیزیکی ذخیره می‌شود؟} در فایل دیتابیس \lr{\texttt{data/cv\_attendance.db}} (نوع \lr{SQLite}). علاوه بر بردار، عکس نمونه‌ی هر بردار هم روی دیسک در پوشه‌ی \lr{\texttt{data/faces/samples/}} ذخیره می‌شود تا ادمین بتواند ببیند هر بردار از چه تصویری ساخته شده.
+\end{note}
+
+\subsection{چطور مقایسه می‌شود؟ (شناسایی زنده)}
+حالا فرد جلوی دوربین است. بردار او ساخته می‌شود و باید با همه‌ی بردارهای ذخیره‌شده مقایسه شود تا نزدیک‌ترین پیدا شود. این مقایسه با \textbf{شباهت کسینوسی} انجام می‌شود.
+
+اول، بردارهای ذخیره‌شده از دیتابیس خوانده و یک‌بار نرمال می‌شوند تا ماتریس مقایسه ساخته شود:
+
+\begin{latin}
+\begin{lstlisting}
+if known_matrix is None:
+    dim = encoding_norm.shape[0]
+    filtered = [
+        (kid, np.asarray(ke, dtype=np.float32))
+        for kid, ke in zip(known_ids, known_encs)
+        if np.asarray(ke).shape[0] == dim
+    ]
+    ...
+    known_matrix = np.array([
+        e / (np.linalg.norm(e) + 1e-8) for _, e in filtered
+    ])
+\end{lstlisting}
+\end{latin}
+
+\begin{note}
+نکته‌ی مهم: شرط \lr{\texttt{ke.shape[0] == dim}} فقط بردارهای \textbf{هم‌بُعد} را نگه می‌دارد. چون دیتابیس ممکن است هم بردار ۵۱۲ عددی (ArcFace) و هم ۱۲۸ عددی (dlib قدیمی) داشته باشد، و مقایسه‌ی آن‌ها بی‌معنی است و خطا می‌دهد.
+\end{note}
+
+سپس مقایسه‌ی واقعی:
+
+\begin{latin}
+\begin{lstlisting}
+if known_matrix.shape[0] > 0:
+    similarities = known_matrix @ encoding_norm  # cosine similarity
+    best_idx = int(np.argmax(similarities))
+    best_sim = float(similarities[best_idx])
+
+    arcface_min_sim = 1.0 - self.tolerance
+    if best_sim > arcface_min_sim:
+        person_id = match_ids[best_idx]
+\end{lstlisting}
+\end{latin}
+
+توضیح دقیق:
+\begin{itemize}[rightmargin=0pt]
+  \item \lr{\texttt{known\_matrix @ encoding\_norm}}: علامت \lr{\texttt{@}} یعنی \textbf{ضرب ماتریسی}. چون همه‌ی بردارها نرمال شده‌اند، حاصلِ ضرب هر بردار ذخیره‌شده در بردار زنده، همان \textbf{شباهت کسینوسی} آن دو است.
+  \item \lr{\texttt{np.argmax(similarities)}}: اندیسِ بیشترین شباهت؛ یعنی نزدیک‌ترین فرد.
+  \item \lr{\texttt{best\_sim}}: مقدار آن بیشترین شباهت.
+  \item \lr{\texttt{arcface\_min\_sim = 1.0 - tolerance}}: آستانه. \lr{tolerance} پیش‌فرض ۰٫۶ است، پس آستانه ۰٫۴ می‌شود. یعنی اگر شباهت \textbf{بیشتر از ۰٫۴} باشد، همان فرد است.
+  \item اگر شرط برقرار باشد، \lr{\texttt{person\_id}} تنظیم می‌شود؛ یعنی «این کارمند شناخته شد».
+\end{itemize}
+
+\textbf{اطمینان (Confidence):} سیستم یک درصد اطمینان هم حساب می‌کند تا اگر نفر دوم هم تقریباً به همان اندازه شبیه بود، اطمینان پایین بیاید:
+
+\begin{latin}
+\begin{lstlisting}
+if similarities.shape[0] >= 2:
+    sd = np.sort(similarities)[::-1]  # descending
+    margin = float(sd[0] - sd[1])
+    confidence = best_sim * min(1.0, 0.5 + margin)
+else:
+    confidence = best_sim
+confidence = max(0.0, min(1.0, confidence))
+confidence = confidence * (0.5 + 0.5 * quality_score)
+\end{lstlisting}
+\end{latin}
+
+\begin{itemize}[rightmargin=0pt]
+  \item \lr{\texttt{margin = sd[0] - sd[1]}}: فاصله‌ی بهترین شباهت با دومی. اگر کم باشد، یعنی سیستم مطمئن نیست، پس اطمینان کم می‌شود.
+  \item خط آخر اطمینان را در \textbf{کیفیت تصویر} ضرب می‌کند؛ تصویر بی‌کیفیت، اطمینان کمتر.
+\end{itemize}
+
+\subsection{یک تصمیم فنی مهم: حذف هم‌ترازی دستی اضافی}
+یک تصمیم مهندسی: \textbf{هم‌ترازی (align) دستیِ اضافه حذف شده} و برای ثبت‌نام و شناسایی از یک مسیر یکسان استفاده می‌شود. دلیلش این است که \lr{ArcFace} خودش داخل مدل، صورت را از روی ۵ نقطه‌ی کلیدی صاف و به اندازه‌ی $112\times112$ می‌برد؛ اگر ما دوباره دستی صاف کنیم و کدگذاری کنیم، فقط بین بردارهای یک نفر «نویز» اضافه می‌شود.
+
+\begin{note}
+\textbf{جمع‌بندی بخش ۵ (برای اسلاید):}
+\begin{enumerate}[rightmargin=0pt]
+  \item \textbf{چطور؟} مدل \lr{ArcFace} تصویر صورت را می‌گیرد و بردار ۵۱۲ عددی می‌سازد.
+  \item \textbf{کِی؟} هنگام ثبت‌نام (برای ذخیره) و در هر فریم زنده (برای شناسایی).
+  \item \textbf{چه می‌کند؟} بردار را نرمال می‌کند تا آماده‌ی مقایسه شود.
+  \item \textbf{کجا ذخیره می‌شود؟} جدول \lr{\texttt{face\_encodings}} در فایل \lr{SQLite}، به‌صورت \lr{JSON}.
+  \item \textbf{چطور مقایسه می‌شود؟} با شباهت کسینوسی (ضرب ماتریسی بردارهای نرمال‌شده) و آستانه‌ی ۰٫۴.
+\end{enumerate}
+\end{note}
+
+% ================================================================
+\section{مرحله به مرحله: از دوربین تا ثبت حضور}
+% ================================================================
+حالا کل چرخه را از ابتدا دنبال می‌کنیم.
+
+\subsection{خواندن فریم از دوربین}
+یک \textbf{نخ (Thread) پس‌زمینه} مدام از دوربین فریم می‌خواند. این حلقه \lr{\texttt{camera\_loop}} است:
+
+\begin{latin}
+\begin{lstlisting}
+raw = recognizer.read()
+if raw is None:
+    time.sleep(0.016)
+    continue
+...
+with recognition_lock:
+    results = recognizer.recognize(raw)
+
+# Annotated frame for the MJPEG stream
+display = raw.copy()
+if results:
+    recognizer.draw_boxes(display, results)
+
+with cam_lock:
+    frame = display
+    raw_frame = raw
+    frame_seq += 1
+\end{lstlisting}
+\end{latin}
+
+نکته‌ی کلیدی: \textbf{دو نوع فریم داریم:}
+\begin{itemize}[rightmargin=0pt]
+  \item \lr{\texttt{raw\_frame}}: فریم \textbf{خام} بدون هیچ نوشته یا کادر. از این برای ساخت بردار استفاده می‌شود.
+  \item \lr{\texttt{frame}} (display): فریم \textbf{نمایشی} که کادر و اسم روی آن کشیده شده. این فقط برای نمایش در مرورگر است.
+\end{itemize}
+
+\begin{note}
+چرا مهم است؟ اگر بردار را از فریم نمایشی (که روی آن نوشته کشیده‌ایم) بگیریم، آن نوشته‌ها بردار را خراب می‌کنند. برای همین جداسازی \lr{\texttt{raw\_frame}} از \lr{\texttt{frame}} انجام شده (کار حامد — بخش ۱۰). این جداسازی هنگام ثبت‌نام هم رعایت شده:
+\begin{latin}
+\begin{lstlisting}
+# Get a fresh unannotated frame. The display frame has recognition
+# boxes drawn onto it, which corrupts any encoding taken from it.
+with cam_lock:
+    current_frame = raw_frame.copy() if raw_frame is not None else None
+\end{lstlisting}
+\end{latin}
+\end{note}
+
+\subsection{پردازش نتایج و ثبت حضور}
+بعد از شناسایی، تابع \lr{\texttt{\_process\_results}} تصمیم می‌گیرد چه کاری انجام شود:
+
+\begin{latin}
+\begin{lstlisting}
+for r in results:
+    pid = r["person_id"]
+
+    # Unknown face
+    if pid is None:
+        ...  # keep for guest registration
+        continue
+
+    # Guests are recognized but have no attendance record...
+    if not pid.startswith("W"):
+        continue
+
+    # Cooldown check
+    if now - cooldowns.get(pid, datetime.min) < timedelta(seconds=settings.cooldown_seconds):
+        continue
+
+    if not attendance.record_sighting(pid, r["name"], now):
+        continue
+    cooldowns[pid] = now
+\end{lstlisting}
+\end{latin}
+
+توضیح منطق:
+\begin{itemize}[rightmargin=0pt]
+  \item اگر \lr{\texttt{person\_id}} تهی باشد، چهره \textbf{ناشناس} است $\rightarrow$ کاندید ثبت به‌عنوان مهمان.
+  \item اگر شناسه با \lr{\texttt{W}} شروع نشود (یعنی مهمان است، نه کارمند \lr{\texttt{W001}})، حضورش ثبت \textbf{نمی‌شود}. این جلوی «حضور کاذب» را می‌گیرد.
+  \item \textbf{Cooldown (زمان خنک‌شدن):} اگر یک نفر را همین چند ثانیه پیش ثبت کردیم، دوباره ثبت نمی‌کنیم تا دیتابیس پر از رکورد تکراری نشود (پیش‌فرض ۸ ثانیه).
+  \item در نهایت \lr{\texttt{record\_sighting}} را صدا می‌زند که حضور را ثبت می‌کند.
+\end{itemize}
+
+\subsection{منطق «ورود» و «خروج»}
+این پروژه سبک ساده و هوشمندی برای حضور دارد: \textbf{اولین بار دیده‌شدن = ورود، آخرین بار دیده‌شدن = خروج}. توضیحش در بالای \lr{\texttt{attendance.py}} آمده:
+
+\begin{latin}
+\begin{lstlisting}[language=,numbers=none]
+A worker's "clock-in" is the first time their face is seen in a day and
+"clock-out" is the last time it is seen. ... Working hours are simply
+last_seen - first_seen.
+\end{lstlisting}
+\end{latin}
+
+و در تابع \lr{\texttt{record\_sighting}} این‌طور اجرا می‌شود:
+
+\begin{latin}
+\begin{lstlisting}
+if sighting is None:
+    sighting = FaceSighting(
+        worker_id=worker.id,
+        event_date=now,
+        first_seen=now,
+        last_seen=now,
+    )
+    db.add(sighting)
+else:
+    sighting.last_seen = now
+db.commit()
+\end{lstlisting}
+\end{latin}
+
+\begin{itemize}[rightmargin=0pt]
+  \item \textbf{بار اول در روز:} یک رکورد \lr{\texttt{FaceSighting}} ساخته می‌شود با \lr{first\_seen = last\_seen = now}.
+  \item \textbf{دفعات بعد:} فقط \lr{\texttt{last\_seen}} به‌روز می‌شود.
+  \item \textbf{ساعت کار} $= last\_seen - first\_seen$.
+\end{itemize}
+
+\subsection{تشخیص ناهنجاری (Anomaly)}
+سیستم موارد مشکوک را هم علامت می‌زند، مثلاً ورود خیلی زودهنگام یا ساعت کار غیرعادی:
+
+\begin{latin}
+\begin{lstlisting}[language=,numbers=none]
+MIN_WORK_HOURS = 1          # less than this -> anomaly
+MAX_WORK_HOURS = 16         # more than this -> anomaly
+EARLY_CLOCK_IN = 5          # suspicious clock-in before 5 AM
+LATE_CLOCK_OUT = 2          # suspicious clock-out after 2 AM
+\end{lstlisting}
+\end{latin}
+
+\subsection{چهره‌ی ناشناس $\rightarrow$ مهمان $\rightarrow$ کارمند}
+اگر چهره‌ای شناخته نشود، به‌عنوان \textbf{مهمان (Guest)} ذخیره می‌شود ولی حضورش ثبت نمی‌شود:
+
+\begin{latin}
+\begin{lstlisting}
+if unknown_enc is not None and time.time() - guest_captured_at > settings.guest_capture_interval:
+    gid = db.add_guest([unknown_enc], face_image=unknown_crop)
+\end{lstlisting}
+\end{latin}
+
+بعداً ادمین می‌تواند مهمان را «ارتقا» دهد به کارمند واقعی؛ در \lr{\texttt{promote\_guest\_to\_worker}} بردارهای مهمان به کارمند جدید کپی می‌شوند.
+
+% ================================================================
+\section{بخش داده و دیتابیس}
+% ================================================================
+
+\subsection{جدول‌های اصلی (مدل‌های ORM)}
+هر «جدول» دیتابیس در پایتون به‌شکل یک \textbf{کلاس} تعریف شده (این همان \lr{ORM} است). سه مدل مهم:
+
+\textbf{۱) کارمند (Worker):}
+\begin{latin}
+\begin{lstlisting}
+class Worker(Base):
+    __tablename__ = "workers"
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    worker_id = Column(String(10), unique=True, nullable=False)  # e.g. W001
+    name = Column(String(100), nullable=False)
+    is_active = Column(Integer, default=1)  # 1=active, 0=inactive
+\end{lstlisting}
+\end{latin}
+\begin{itemize}[rightmargin=0pt]
+  \item \lr{\texttt{id}}: شناسه‌ی یکتای داخلی (\lr{UUID}، یک رشته‌ی تصادفی طولانی).
+  \item \lr{\texttt{worker\_id}}: شناسه‌ی انسان‌فهم مثل \lr{\texttt{W001}}.
+  \item \lr{\texttt{is\_active}}: به‌جای حذف فیزیکی، کارمند را \textbf{غیرفعال} می‌کنیم تا تاریخچه‌ی حضورش نشکند (حذف نرم / \lr{Soft Delete}).
+\end{itemize}
+
+\textbf{۲) بردار چهره (FaceEncoding):} همان جدولی که بردار ۵۱۲ عددی را نگه می‌دارد (توضیحش در بخش ۵٫۴).
+
+\textbf{۳) حضور (FaceSighting):} برای هر کارمند در هر روز، \lr{\texttt{first\_seen}} و \lr{\texttt{last\_seen}}.
+
+\subsection{سازگاری با دو نوع دیتابیس}
+یک نکته‌ی مهندسی: پروژه با \textbf{SQLite} (ساده، فایلی) و \textbf{PostgreSQL} (قوی، سروری) هر دو کار می‌کند. برای شناسه‌ها یک نوع سفارشی \lr{\texttt{GUID}} ساخته شده که خودش تشخیص می‌دهد روی کدام دیتابیس است:
+
+\begin{latin}
+\begin{lstlisting}
+class GUID(TypeDecorator):
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(PG_UUID(as_uuid=True))
+        else:
+            return dialect.type_descriptor(CHAR(36))
+\end{lstlisting}
+\end{latin}
+
+\subsection{Repository — لایه‌ی واسط دیتابیس}
+همه‌ی کارهای دیتابیس (افزودن کارمند، خواندن بردارها، حذف و...) در یک کلاس به‌نام \lr{\texttt{FaceRepository}} جمع شده‌اند. این کار خوبی است چون بقیه‌ی برنامه نیازی ندارد جزئیات دیتابیس را بداند؛ فقط متدهای ساده مثل \lr{\texttt{get\_all\_known()}} یا \lr{\texttt{add\_worker()}} را صدا می‌زند. تابع مهم \lr{\texttt{get\_all\_known}} همه‌ی بردارهای کارمندان فعال و مهمان‌ها را برای مقایسه برمی‌گرداند.
+
+\subsection{کَش (Cache) برای سرعت}
+اگر برای هر فریم به دیتابیس می‌زدیم، خیلی کند می‌شد. برای همین بردارهای شناخته‌شده در حافظه \textbf{کَش (ذخیره‌ی موقت سریع)} می‌شوند و هر ۵ ثانیه یک‌بار تازه می‌شوند:
+
+\begin{latin}
+\begin{lstlisting}
+def _get_known(self) -> tuple[List[str], List[np.ndarray]]:
+    """Known encodings, cached for a short TTL to keep the loop off the DB."""
+    now = time.time()
+    if self._known_cache is None or now - self._known_cache_at > self._known_cache_ttl:
+        self._known_cache = self.db.get_all_known()
+        self._known_cache_at = now
+    return self._known_cache
+\end{lstlisting}
+\end{latin}
+\begin{itemize}[rightmargin=0pt]
+  \item \lr{\texttt{TTL (Time To Live)}}: مدت‌زمانی که کَش معتبر است (اینجا ۵ ثانیه).
+  \item وقتی کارمندی اضافه/حذف می‌شود، \lr{\texttt{invalidate\_cache()}} صدا زده می‌شود تا کَش دور ریخته و تازه شود.
+\end{itemize}
+
+\subsection{مایگریشن (Alembic)}
+هر وقت ساختار دیتابیس تغییر کند، به‌جای ساخت دستی، از \textbf{Alembic} استفاده می‌شود. فایل‌های مایگریشن در پوشه‌ی \lr{\texttt{alembic/versions/}} هستند. هر فایل یک تغییر ساختار را ثبت می‌کند تا همه‌ی اعضای تیم دیتابیس یکسانی داشته باشند.
+
+\subsection{پشتیبان‌گیری هنگام مهاجرت به ArcFace}
+وقتی پروژه از روش قدیمی (\lr{dlib}، بردار ۱۲۸ عددی) به \lr{ArcFace} (بردار ۵۱۲ عددی) ارتقا یافت، همه‌ی بردارهای قدیمی دیگر بی‌اعتبار شدند (چون بُعدشان فرق دارد). قبل از این کار، یک نسخه‌ی پشتیبان از دیتابیس گرفته شد (\lr{\texttt{cv\_attendance.db.pre-arcface.bak}}) و بردارها از روی عکس‌های ذخیره‌شده دوباره ساخته شدند. کد هم طوری نوشته شده که اگر بردار قدیمی ۱۲۸ عددی هنوز در دیتابیس باشد، آن را نادیده بگیرد (شرط هم‌بُعد بودن در بخش ۵٫۵). این کار سینا حسن‌پور است — بخش ۱۰.
+
+% ================================================================
+\section{بخش وب، API و امنیت}
+% ================================================================
+
+\subsection{FastAPI و مشکل «قفل شدن سرور»}
+سرور با \textbf{FastAPI} ساخته شده. \lr{FastAPI} یک \textbf{Event Loop (حلقه‌ی رویداد)} دارد که درخواست‌ها را نوبتی مدیریت می‌کند. مشکل این بود: کارهای دیتابیسی \textbf{مسدودکننده (blocking)} هستند و اگر مستقیم در حلقه اجرا شوند، کل سرور تا پایان آن کار «قفل» می‌شود و مرورگر تایم‌اوت می‌دهد.
+
+\textbf{راه‌حل:} اندپوینت‌هایی که کار دیتابیسی سنگین دارند به‌جای \lr{\texttt{async def}} به‌صورت \lr{\texttt{def}} معمولی تعریف شده‌اند. وقتی \lr{FastAPI} یک تابع معمولی می‌بیند، آن را در یک \textbf{Thread Pool (استخر نخ)} جدا اجرا می‌کند و حلقه‌ی اصلی آزاد می‌ماند:
+
+\begin{latin}
+\begin{lstlisting}
+@app.get("/api/dashboard", tags=["Dashboard"])
+def api_dashboard():
+    """JSON dashboard data.
+
+    Declared sync on purpose: every call does blocking DB work, so Starlette
+    runs it in the threadpool instead of stalling the event loop (which made the
+    browser's 5s fetch timeout abort while the camera thread held the GIL).
+    """
+\end{lstlisting}
+\end{latin}
+
+\begin{note}
+این همان بهینه‌سازی هم‌روندی است که زمان پاسخ \lr{API} را به ۵۵ تا ۸۹ میلی‌ثانیه رساند. کار امیرمحمد احمدی — بخش ۱۰.
+
+\textbf{GIL} که در کامنت آمده یعنی «قفل سراسری مفسر پایتون»؛ محدودیتی که باعث می‌شود در یک لحظه فقط یک نخ کد پایتون اجرا کند. به همین دلیل مدیریت درست نخ‌ها حیاتی است.
+\end{note}
+
+\subsection{پخش زنده‌ی ویدیو (MJPEG)}
+تصویر زنده‌ی دوربین با روش \textbf{MJPEG} به مرورگر فرستاده می‌شود: یعنی پشت سر هم عکس‌های \lr{JPEG} ارسال می‌شوند و مرورگر آن‌ها را مثل ویدیو نشان می‌دهد:
+
+\begin{latin}
+\begin{lstlisting}
+def _mjpeg_generator():
+    ...
+    _, buf = cv2.imencode(".jpg", display, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    data = buf.tobytes()
+    yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + data + b"\r\n"
+\end{lstlisting}
+\end{latin}
+\begin{itemize}[rightmargin=0pt]
+  \item \lr{\texttt{cv2.imencode(".jpg", ...)}}: تصویر را به فرمت \lr{JPEG} فشرده می‌کند.
+  \item کیفیت ۸۵ (از ۱۰۰) انتخاب شده تا تعادل بین کیفیت و حجم برقرار باشد.
+  \item در حلقه‌ی دوربین \lr{\texttt{time.sleep(0.01)}} هست تا نرخ فریم کنترل شود و پردازنده اشباع نشود. کار امیرمحمد.
+\end{itemize}
+
+\subsection{به‌روزرسانی بلادرنگ با WebSocket}
+علاوه بر ویدیو، رویدادهای حضور به‌صورت \textbf{بلادرنگ (Real-time)} به داشبورد فرستاده می‌شوند. برای این کار از \textbf{WebSocket} استفاده شده؛ یک اتصال دائمی دو‌طرفه بین مرورگر و سرور. با هر ثبت حضور، تابع \lr{\texttt{broadcast\_event}} پیام را به همه‌ی مرورگرهای متصل می‌فرستد.
+
+\subsection{امنیت: JWT و RBAC}
+دو سازوکار امنیتی داریم:
+
+\textbf{۱) JWT (توکن):} وقتی کاربر با نام و رمز وارد می‌شود، سرور یک «بلیت» رمزنگاری‌شده به او می‌دهد. کاربر این بلیت را در درخواست‌های بعدی می‌فرستد و دیگر لازم نیست هر بار رمز بدهد:
+
+\begin{latin}
+\begin{lstlisting}
+def create_access_token(data: dict, expires_delta=None) -> str:
+    to_encode = data.copy()
+    ...
+    to_encode.update({"exp": expire, "iat": now, "type": "access"})
+    encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+    return encoded_jwt
+\end{lstlisting}
+\end{latin}
+\begin{itemize}[rightmargin=0pt]
+  \item \lr{\texttt{exp}}: زمان انقضای توکن (پیش‌فرض ۳۰ دقیقه). بعد از آن باید تازه شود.
+  \item توکن با یک \textbf{کلید مخفی (secret\_key)} امضا می‌شود؛ کسی نمی‌تواند توکن جعلی بسازد.
+\end{itemize}
+
+\textbf{۲) RBAC (کنترل دسترسی نقش‌محور):} هر کاربر یک \textbf{نقش} دارد و هر نقش مجموعه‌ای از \textbf{اجازه‌ها}:
+
+\begin{latin}
+\begin{lstlisting}
+ROLE_PERMISSIONS = {
+    Role.ADMIN:    [ ... all permissions ... ],
+    Role.MANAGER:  [ WORKER_READ, WORKER_CREATE, ..., ATTENDANCE_EXPORT, ... ],
+    Role.OPERATOR: [ WORKER_READ, WORKER_CREATE, ATTENDANCE_READ, ... ],
+    Role.VIEWER:   [ WORKER_READ, ATTENDANCE_READ, API_ACCESS ],
+}
+\end{lstlisting}
+\end{latin}
+
+مثلاً فقط \textbf{ADMIN} می‌تواند کارمند حذف کند؛ \textbf{VIEWER} فقط می‌تواند ببیند. رمزها هم به‌صورت \textbf{هش (Hash)} ذخیره می‌شوند نه متن ساده. زیرساخت \lr{JWT/RBAC} کار امیرمحمد است.
+
+\subsection{پنل ادمین (دیباگ مدل)}
+یک صفحه‌ی ادمین جدا وجود دارد که پشت \textbf{HTTP Basic} (نام‌کاربری/رمز مرورگری) محافظت شده. این پنل امکاناتی دارد:
+\begin{itemize}[rightmargin=0pt]
+  \item دیدن عکس هر کارمند و بردارهایش.
+  \item دیدن \textbf{بُعد هر بردار} (باید ۵۱۲ باشد).
+  \item افزودن/حذف نمونه، با شرط مهم: \textbf{آخرین نمونه‌ی یک کارمند حذف نمی‌شود} وگرنه دیگر هرگز شناخته نمی‌شود:
+\begin{latin}
+\begin{lstlisting}
+if len(worker.encodings) <= 1:
+    return False, "Cannot delete the only sample - the worker would never be recognized"
+\end{lstlisting}
+\end{latin}
+\end{itemize}
+این پنل کار امیرمحمد است.
+
+% ================================================================
+\section{ماژول‌های بینایی ماشین}
+% ================================================================
+اینها در پوشه‌ی \lr{\texttt{cv\_modules/}} هستند و کار حامد نبی‌پور. هر کدام یک وظیفه‌ی جدا دارند.
+
+\subsection{ارزیابی کیفیت}
+قبل از اینکه انرژی صرف شناسایی کنیم، چک می‌کنیم تصویر صورت به‌قدر کافی خوب هست یا نه. پنج معیار سنجیده می‌شود و یک نمره‌ی کلی بین ۰ تا ۱ می‌دهد:
+\begin{itemize}[rightmargin=0pt]
+  \item \textbf{تاری (Blur):} با «واریانس لاپلاسین» سنجیده می‌شود. لاپلاسین لبه‌ها را برجسته می‌کند؛ تصویر واضح لبه‌های تیز و واریانس بالا دارد، تصویر تار واریانس پایین.
+\begin{latin}
+\begin{lstlisting}
+lap = cv2.Laplacian(gray, cv2.CV_64F)
+blur_var = lap.var()
+\end{lstlisting}
+\end{latin}
+  \item \textbf{روشنایی (Brightness):} میانگین روشنایی؛ بهترین حدود ۱۲۸ (نه خیلی تاریک، نه سوخته).
+  \item \textbf{کنتراست (Contrast):} انحراف معیار پیکسل‌ها؛ کم بودنش یعنی تصویر مسطح و بی‌جزئیات.
+  \item \textbf{زاویه‌ی سر (Pose):} از روی نقاط کلیدی، چقدر صورت به چپ/راست یا بالا/پایین چرخیده.
+  \item \textbf{پوشیدگی (Occlusion):} آیا بخشی از صورت پوشیده است (ماسک و...).
+\end{itemize}
+نمره‌ی نهایی وزن‌دار است: تاری و زاویه بیشترین وزن (هرکدام ۰٫۲۵).
+
+\subsection{تشخیص زنده‌بودن}
+جلوی تقلب با عکس چاپی یا صفحه‌ی موبایل را می‌گیرد. سه نشانه بررسی می‌شود و ترکیب می‌شوند:
+\begin{itemize}[rightmargin=0pt]
+  \item \textbf{پلک‌زدن (Blink):} با «نسبت ابعاد چشم» (\lr{EAR}). وقتی چشم بسته می‌شود \lr{EAR} افت می‌کند؛ یک آدم واقعی طبیعی پلک می‌زند، عکس نه.
+  \item \textbf{بافت/فرکانس (Texture/FFT):} صورت واقعی جزئیات ریز (فرکانس بالا) دارد؛ عکس چاپی یا صفحه‌ی موبایل این جزئیات را ندارد. با تبدیل فوریه (\lr{FFT}) و لاپلاسین سنجیده می‌شود.
+  \item \textbf{حرکت طبیعی سر (Motion):} آدم واقعی ریز‌حرکت‌های غیرارادی دارد؛ عکس کاملاً ثابت است.
+\end{itemize}
+نمره‌ی نهایی وزن‌دار است و اگر از آستانه (۰٫۵۵) کمتر باشد، آن چهره رد می‌شود:
+
+\begin{latin}
+\begin{lstlisting}
+if not liveness_result.is_live:
+    continue
+\end{lstlisting}
+\end{latin}
+
+\subsection{ردیابی چهره}
+مشکل: در یک فریم ممکن است تشخیص اشتباه شود یا صورت لحظه‌ای گم شود. راه‌حل: یک صورت را بین فریم‌های پشت‌سرهم \textbf{دنبال (Track)} می‌کنیم و هویت را با \textbf{رأی‌گیری در طول زمان} تثبیت می‌کنیم. سه تکنیک کلیدی:
+\begin{itemize}[rightmargin=0pt]
+  \item \textbf{IoU (نسبت هم‌پوشانی):} برای اینکه بفهمیم کادر این فریم با کدام کادر فریم قبلی «همان صورت» است، میزان هم‌پوشانی دو کادر را حساب می‌کنیم.
+  \item \textbf{فیلتر کالمن (Kalman Filter):} حرکت کادر را پیش‌بینی و نرم می‌کند تا کادر نپرد.
+  \item \textbf{رأی‌گیری هویت:} در چند فریم رأی جمع می‌شود؛ هویتی که بیشترین رأی وزن‌دار را دارد، هویت نهایی می‌شود. این کار «چشمک‌زدن» اسم روی صفحه را حذف می‌کند.
+\end{itemize}
+
+\subsection{موتور پشتیبان (dlib)}
+اگر \lr{InsightFace} به هر دلیلی بارگذاری نشود، سیستم خودکار به روش قدیمی‌تر \lr{\texttt{face\_recognition}} (مبتنی بر \lr{dlib}، بردار ۱۲۸ عددی) برمی‌گردد. این نشانه‌ی طراحی مقاوم (\lr{fallback}) است: اگر بهترین ابزار نبود، سیستم به‌جای خراب شدن، با ابزار ضعیف‌تر ادامه می‌دهد. تفاوت مهم: \lr{dlib} با \textbf{فاصله‌ی اقلیدسی} مقایسه می‌کند نه شباهت کسینوسی.
+
+% ================================================================
+\section{روند ساخت پروژه توسط تیم}
+% ================================================================
+پروژه در چند فاز و به‌صورت تیمی پیش رفت. ترتیب زمانی و تقسیم کار به این شکل بود:
+
+\subsection{فاز صفر — طراحی و اسکلت اولیه (کار مشترک)}
+ابتدا هر سه نفر روی معماری کلی توافق کردیم: تصمیم گرفتیم سیستم سه لایه باشد (بینایی، داده، وب) و از \lr{InsightFace/ArcFace} به‌عنوان موتور اصلی استفاده کنیم. اسکلت پوشه‌ها و فایل‌ها چیده شد.
+
+\subsection{فاز یک — سینا حسن‌پور (داده و منطق) — مشارکت ۴۵٪}
+سینا زیرساخت داده را بنا کرد، چون بدون دیتابیس، بقیه نمی‌توانستند کار کنند:
+\begin{itemize}[rightmargin=0pt]
+  \item \textbf{طراحی مدل‌های ORM} در پوشه‌ی \lr{\texttt{models/}}: کلاس‌های \lr{\texttt{Worker}}، \lr{\texttt{FaceEncoding}}، \lr{\texttt{Guest}} و \lr{\texttt{FaceSighting}}.
+  \item \textbf{مایگریشن‌های Alembic} برای ساخت و به‌روزرسانی جدول‌ها.
+  \item \textbf{منطق حضور و غیاب} در \lr{\texttt{attendance.py}}: ثبت ورود/خروج بر اساس اولین و آخرین دیده‌شدن، محاسبه‌ی ساعت کار، و مهم‌تر: \textbf{تفکیک مهمان از کارمند} تا حضور کاذب ثبت نشود (شرط \lr{\texttt{if not pid.startswith("W")}}).
+  \item \textbf{مهاجرت دیتابیس به بردار ۵۱۲ بُعدی ArcFace:} گرفتن پشتیبان \lr{\texttt{cv\_attendance.db.pre-arcface.bak}} و بازسازی بردارها از روی عکس‌های ذخیره‌شده.
+  \item \textbf{کشف چند باگ} در مسیر داده و همفکری در بخش بینایی ماشین.
+\end{itemize}
+
+\subsection{فاز دو — حامد نبی‌پور (بینایی ماشین و هوش مصنوعی) — مشارکت ۳۰٪}
+وقتی لایه‌ی داده آماده شد، حامد موتور شناسایی را ساخت و مقاوم کرد:
+\begin{itemize}[rightmargin=0pt]
+  \item \textbf{راه‌اندازی \lr{InsightFace/ArcFace}} با بردار ۵۱۲ عددی در \lr{\texttt{face\_recognizer.py}}.
+  \item \textbf{رفع باگ broadcast در \lr{SCRFD}:} اصلاح پارامتر ورودی به \lr{\texttt{det\_size=(320, 320)}} (توضیح کامل در بخش ۵٫۲).
+  \item \textbf{اصلاح خط‌لوله‌ی تصویر:} جداسازی \lr{\texttt{raw\_frame}} (خام) از فریم نمایشی برای استخراج بردار باکیفیت، حذف هم‌ترازی دستی اضافی، و یکسان‌سازی مسیر ثبت‌نام و شناسایی زنده در تابع \lr{\texttt{recognize()}} (بخش ۵٫۶ و ۶٫۱).
+  \item \textbf{ساخت ماژول‌های پردازشی} در \lr{\texttt{cv\_modules/}}: ارزیابی کیفیت، تشخیص زنده‌بودن و ردیابی چهره (بخش ۹).
+\end{itemize}
+
+\subsection{فاز سه — امیرمحمد احمدی (وب، API و رابط کاربری) — مشارکت ۲۵٪}
+در نهایت، امیرمحمد همه چیز را در قالب یک سرویس وب قابل‌استفاده بسته‌بندی کرد:
+\begin{itemize}[rightmargin=0pt]
+  \item \textbf{بهینه‌سازی هم‌روندی \lr{FastAPI}:} اصلاح مسیرهای مسدودکننده‌ی دیتابیس در \lr{\texttt{main\_fastapi.py}} و انتقال کار به \lr{Thread Pool}؛ کاهش زمان پاسخ \lr{API} به ۵۵ تا ۸۹ میلی‌ثانیه (بخش ۸٫۱).
+  \item \textbf{داشبورد و استریم زنده:} پیاده‌سازی استریم \lr{MJPEG} دوربین و ارتباط بلادرنگ \lr{WebSocket} در \lr{\texttt{templates/}}، و کنترل نرخ فریم با \lr{\texttt{time.sleep(0.01)}} (بخش ۸٫۲ و ۸٫۳).
+  \item \textbf{پنل مدیریت و امنیت:} پنل ادمین برای دیباگ مدل (دیدن آواتارها، بُعد ۵۱۲، افزودن/حذف نمونه با شرط عدم حذف آخرین نمونه) و زیرساخت \lr{JWT/RBAC} در \lr{\texttt{auth.py}} (بخش ۸٫۴ و ۸٫۵).
+\end{itemize}
+
+\begin{note}
+\textbf{جمله‌ی جمع‌بندی برای ارائه:} «سینا زیرساخت داده و منطق حضور را ساخت، حامد موتور بینایی و هوش مصنوعی را روی آن سوار و رفع باگ کرد، و امیرمحمد کل سیستم را به یک سرویس وب امن و بلادرنگ تبدیل کرد.»
+\end{note}
+
+% ================================================================
+\section{نکات کلیدی برای اسلاید}
+% ================================================================
+از این‌ها می‌توانی مستقیم اسلاید بسازی. هر بولت یک اسلاید یا یک نکته‌ی گفتاری است.
+
+\subsection*{اسلاید ۱ — مسئله و راه‌حل}
+\begin{itemize}[rightmargin=0pt]
+  \item مشکل: ثبت حضور دستی/کارتی کند و قابل تقلب است.
+  \item راه‌حل: حضور خودکار با تشخیص چهره از دوربین زنده.
+\end{itemize}
+
+\subsection*{اسلاید ۲ — ایده‌ی محوری}
+\begin{itemize}[rightmargin=0pt]
+  \item «هر صورت $\rightarrow$ یک بردار ۵۱۲ عددی (امضای عددی)».
+  \item «تشخیص چهره = مقایسه‌ی دو بردار».
+\end{itemize}
+
+\subsection*{اسلاید ۳ — خط لوله (Pipeline)}
+\begin{itemize}[rightmargin=0pt]
+  \item دوربین $\rightarrow$ آشکارسازی $\rightarrow$ کیفیت $\rightarrow$ بردار $\rightarrow$ مقایسه $\rightarrow$ زنده‌بودن $\rightarrow$ ردیابی $\rightarrow$ ثبت حضور.
+  \item (همان نمودار بخش ۴ را کپی کن.)
+\end{itemize}
+
+\subsection*{اسلاید ۴ — بردار چهره (عمیق)}
+\begin{itemize}[rightmargin=0pt]
+  \item ابزار: \lr{InsightFace} + \lr{ArcFace}، بسته‌ی \lr{\texttt{buffalo\_l}}، اجرا روی \lr{CPU}.
+  \item مقایسه با \textbf{شباهت کسینوسی}؛ آستانه ۰٫۴ (یعنی \lr{1 - tolerance}).
+  \item ذخیره در جدول \lr{\texttt{face\_encodings}} به‌صورت \lr{JSON} در \lr{SQLite}.
+\end{itemize}
+
+\subsection*{اسلاید ۵ — منطق حضور}
+\begin{itemize}[rightmargin=0pt]
+  \item اولین دیده‌شدن = ورود، آخرین = خروج، ساعت کار = تفاضل آن‌ها.
+  \item مهمان‌ها حضور کاذب نمی‌سازند.
+  \item \lr{Cooldown} برای جلوگیری از رکورد تکراری.
+\end{itemize}
+
+\subsection*{اسلاید ۶ — ماژول‌های بینایی}
+\begin{itemize}[rightmargin=0pt]
+  \item کیفیت (تاری/نور/زاویه)، زنده‌بودن (پلک/بافت/حرکت)، ردیابی (\lr{IoU} + کالمن).
+\end{itemize}
+
+\subsection*{اسلاید ۷ — وب و امنیت}
+\begin{itemize}[rightmargin=0pt]
+  \item \lr{FastAPI} + \lr{Thread Pool} (پاسخ ۵۵–۸۹ میلی‌ثانیه)، \lr{MJPEG}، \lr{WebSocket}.
+  \item امنیت: \lr{JWT} + \lr{RBAC}، رمز هش‌شده، پنل ادمین.
+\end{itemize}
+
+\subsection*{اسلاید ۸ — چالش‌های فنی و رفع آن‌ها (نقطه‌قوت ارائه)}
+\begin{itemize}[rightmargin=0pt]
+  \item باگ \lr{SCRFD broadcast} $\rightarrow$ اصلاح \lr{\texttt{det\_size=(320,320)}}.
+  \item جداسازی فریم خام از نمایشی برای بردار سالم.
+  \item مهاجرت ۱۲۸$\rightarrow$۵۱۲ بُعدی با پشتیبان‌گیری و بازسازی بردارها.
+  \item رفع کندی \lr{Event Loop} با \lr{Thread Pool}.
+\end{itemize}
+
+\subsection{چند سوال محتمل داور و پاسخ کوتاه}
+\begin{itemize}[rightmargin=0pt]
+  \item \textbf{چرا کسینوسی نه اقلیدسی؟} چون \lr{ArcFace} طوری آموزش دیده که هویت در «جهت» بردار کدگذاری می‌شود، نه طولش؛ کسینوسی جهت را می‌سنجد.
+  \item \textbf{چرا ۵۱۲ بُعد بهتر از ۱۲۸؟} توصیف دقیق‌تر و تفکیک‌پذیری بالاتر بین افراد.
+  \item \textbf{اگر دو نفر شبیه باشند؟} سیستم با «\lr{margin}» (فاصله‌ی نفر اول و دوم) اطمینان را کم می‌کند.
+  \item \textbf{اگر کسی عکس نشان دهد؟} ماژول \lr{Liveness} (بافت/پلک/حرکت) آن را رد می‌کند.
+  \item \textbf{اگر \lr{InsightFace} نصب نشود؟} سیستم خودکار به \lr{dlib} (۱۲۸ بُعدی) برمی‌گردد.
+  \item \textbf{حریم خصوصی؟} فقط بردار عددی ذخیره می‌شود؛ با حذف کارمند، بردار و عکس‌هایش هم حذف می‌شوند.
+\end{itemize}
+
+% ================================================================
+\section*{پیوست: نقشه‌ی فایل‌ها (کجا دنبال چه بگردی)}
+\addcontentsline{toc}{section}{پیوست: نقشه‌ی فایل‌ها}
+% ================================================================
+
+\begin{longtable}{|p{5cm}|p{9.5cm}|}
+\hline
+\textbf{فایل} & \textbf{مسئولیت} \\
+\hline
+\endhead
+\lr{\texttt{face\_recognizer.py}} & موتور تشخیص: ساخت و مقایسه‌ی بردار \\
+\hline
+\lr{\texttt{cv\_modules/quality.py}} & ارزیابی کیفیت تصویر \\
+\hline
+\lr{\texttt{cv\_modules/liveness.py}} & تشخیص زنده‌بودن \\
+\hline
+\lr{\texttt{cv\_modules/tracking.py}} & ردیابی چهره \\
+\hline
+\lr{\texttt{attendance.py}} & منطق ورود/خروج و ساعت کار \\
+\hline
+\lr{\texttt{models/worker.py}} & مدل کارمند و بردار \\
+\hline
+\lr{\texttt{models/attendance.py}} & مدل حضور \\
+\hline
+\lr{\texttt{models/repository.py}} & همه‌ی عملیات دیتابیس \\
+\hline
+\lr{\texttt{main\_fastapi.py}} & سرور وب، \lr{API}، داشبورد، پنل ادمین \\
+\hline
+\lr{\texttt{auth.py}} & امنیت \lr{JWT} و \lr{RBAC} \\
+\hline
+\lr{\texttt{config.py}} & تنظیمات (آستانه‌ها، مسیرها و...) \\
+\hline
+\lr{\texttt{main.py}} & اجرای خط‌فرمان (\lr{CLI}) \\
+\hline
+\end{longtable}
+
+\end{document}

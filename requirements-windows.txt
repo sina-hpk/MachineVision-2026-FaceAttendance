@@ -1,0 +1,8 @@
+# CV Attendance System - Windows-specific Requirements
+# This file is used on Windows for dependencies that need special handling
+
+# dlib on Windows - use pre-built wheel
+dlib==19.24.1
+
+# Windows-specific: pywin32 for better process management (optional)
+pywin32>=306

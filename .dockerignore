@@ -1,0 +1,40 @@
+# ============================================================
+# Docker build context exclusions
+# ============================================================
+# Virtual envs (local, often Windows-specific)
+.venv/
+venv/
+env/
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+
+# Environment & secrets
+.env
+.env.local
+
+# Runtime data (biometric samples must never be in the image)
+data/
+*.db
+*.sqlite
+
+# Local report / latex artifacts
+*.aux
+*.out
+*.toc
+*.log
+*.synctex.gz
+screenshots/
+screenshot*.png
+
+# Git
+.git/
+.gitignore
+
+# Docs already maintained separately in repo are fine, but keep the image lean
+docs/proposal.pdf

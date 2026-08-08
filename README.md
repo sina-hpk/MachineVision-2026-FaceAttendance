@@ -100,25 +100,38 @@ MachineVision-2026-FaceAttendance/
    cd MachineVision-2026-FaceAttendance
    ```
 
-3. Create and activate a virtual environment:
+3. **Quick Start (Cross-Platform)** - Use the unified launcher:
+
+   ```bash
+   # Windows
+   python run.py
+
+   # Linux/macOS
+   python3 run.py
+   ```
+
+   The launcher will automatically:
+   - Create a virtual environment
+   - Install all dependencies (including Windows-specific wheels)
+   - Set up the `.env` file
+   - Start the server
+
+   **Options:**
+   - `python run.py --dev`     - Development mode with hot reload
+   - `python run.py --docker`  - Run with Docker Compose
+   - `python run.py --install` - Install dependencies only
+   - `python run.py --test`    - Run test suite
+
+4. **Manual Setup** (if you prefer):
 
    ```bash
    python -m venv .venv
    source .venv/bin/activate      # Linux/macOS
    # .venv\Scripts\activate       # Windows
-   ```
-
-4. Install the dependencies:
-
-   ```bash
    pip install -r requirements.txt
    ```
 
-   > **Windows users:** install the prebuilt `dlib` wheel (fallback engine):
-   >
-   > ```bash
-   > pip install https://github.com/z-mahmud22/Dlib_Windows_Python3.x/raw/main/dlib-19.24.1-cp311-cp311-win_amd64.whl
-   > ```
+   > **Windows users:** dlib is automatically installed via pre-built wheel (see `requirements-windows.txt`)
 
 5. Configure environment:
 
@@ -131,9 +144,45 @@ MachineVision-2026-FaceAttendance/
 
 ## 🚀 Usage & Execution
 
-### Run the server (recommended — production-ready FastAPI)
+### Quick Start (Recommended)
 
-> ⚠️ Use the **project virtual environment** — do NOT run with your system Python (e.g. Python 3.14 has no compatible `pydantic_core`/`dlib` wheels).
+Use the unified cross-platform launcher:
+
+```bash
+# Windows
+python run.py
+
+# Linux/macOS
+python3 run.py
+```
+
+This will automatically set up the environment and start the server.
+
+Open your browser: **http://localhost:8000**
+
+- Dashboard & live camera stream: `http://localhost:8000/`
+- Admin panel (HTTP Basic): `http://localhost:8000/admin`
+- Swagger UI (auto docs): `http://localhost:8000/docs`
+
+### Development Mode
+
+```bash
+# Hot reload for development
+python run.py --dev
+```
+
+### Docker (Production)
+
+```bash
+# Requires Docker Desktop
+python run.py --docker
+# Or directly:
+docker-compose up --build
+```
+
+### Manual Run (Advanced)
+
+> ⚠️ Use the **project virtual environment** — do NOT run with your system Python.
 
 ```bash
 # Windows (from the project root)
@@ -143,12 +192,6 @@ MachineVision-2026-FaceAttendance/
 source .venv/bin/activate
 python -m uvicorn main_fastapi:app --host 0.0.0.0 --port 8000 --reload
 ```
-
-Open your browser: **http://localhost:8000**
-
-- Dashboard & live camera stream: `http://localhost:8000/`
-- Admin panel (HTTP Basic): `http://localhost:8000/admin`
-- Swagger UI (auto docs): `http://localhost:8000/docs`
 
 ### Register workers
 
